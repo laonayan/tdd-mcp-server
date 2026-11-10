@@ -59,7 +59,8 @@
   "files": [
     "dist",
     "templates",
-    "best-practices"
+    "best-practices",
+    "skills"
   ],
   "bin": {
     "tdd-mcp-server": "./dist/server.js"

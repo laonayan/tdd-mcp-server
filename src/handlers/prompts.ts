@@ -8,10 +8,27 @@ import {
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { parseSkill } from '../lib/skill-template.js';
 
 // ESM-compatible __dirname (package "type": "module")
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * 加载技能资产：优先 skills/<name>/SKILL.md（superpowers 式技能文件，
+ * 含 YAML frontmatter），剥离 frontmatter 返回正文；失败时回退 templates/
+ * 旧文件与内联默认模板，保持资源 URI 兼容。
+ * frontmatter 解析与插值逻辑见 src/lib/skill-template.ts（可在 jest 下单测）。
+ */
+async function loadSkillBody(skillName: string): Promise<string | null> {
+  try {
+    const skillPath = path.join(__dirname, '../../skills', skillName, 'SKILL.md');
+    const raw = await fs.readFile(skillPath, 'utf8');
+    return parseSkill(raw).body;
+  } catch {
+    return null;
+  }
+}
 
 // Prompt definitions
 const PROMPTS: Prompt[] = [
@@ -203,7 +220,7 @@ export const promptsHandler = {
 
 // Individual prompt generators
 async function getTDDWorkflowPrompt(args: Record<string, string>): Promise<GetPromptResult> {
-  const template = await loadTemplate('tdd-workflow.md');
+  const template = (await loadSkillBody('tdd-workflow')) ?? (await loadTemplate('tdd-workflow.md'));
   
   const content = template
     .replace('{{FEATURE_DESCRIPTION}}', args.feature_description || '[Feature Description]')
@@ -226,7 +243,7 @@ async function getTDDWorkflowPrompt(args: Record<string, string>): Promise<GetPr
 }
 
 async function getTestGenerationPrompt(args: Record<string, string>): Promise<GetPromptResult> {
-  const template = await loadTemplate('test-generation.md');
+  const template = (await loadSkillBody('test-generation')) ?? (await loadTemplate('test-generation.md'));
   
   const content = template
     .replace('{{REQUIREMENTS}}', args.requirements || '[Requirements]')
@@ -318,7 +335,7 @@ async function getRedGreenRefactorPrompt(args: Record<string, string>): Promise<
 }
 
 async function getDebugFailingTestsPrompt(args: Record<string, string>): Promise<GetPromptResult> {
-  const template = await loadTemplate('debug-failing-tests.md');
+  const template = (await loadSkillBody('debugging')) ?? (await loadTemplate('debug-failing-tests.md'));
   
   const content = template
     .replace('{{FAILING_TESTS}}', args.failing_tests || '[Failing Tests]')

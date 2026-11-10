@@ -617,7 +617,7 @@ tdd-mcp-server/
 │   │   ├── tools.ts           # v1.0传统15工具系统
 │   │   ├── new-tools.ts       # v2.0新3工具系统
 │   │   ├── resources.ts       # 文件和报告访问
-│   │   └── prompts.ts         # TDD工作流提示
+│   │   └── prompts.ts         # TDD工作流提示（优先从 skills/ 加载技能文件，回退 templates/ 模板）
 │   ├── services/              # 核心业务逻辑
 │   │   ├── storage.service.ts 
 │   │   ├── feature-management.service.ts
@@ -626,6 +626,10 @@ tdd-mcp-server/
 │   │   └── ...
 │   ├── i18n.ts               # 国际化服务
 │   └── types/                # TypeScript类型定义
+├── skills/                  # 技能资产（SKILL.md：frontmatter + 步骤指引，prompts 数据源）
+│   ├── tdd-workflow/
+│   ├── test-generation/
+│   └── debugging/
 ├── examples/
 │   └── v2-usage-guide.md    # v2.0详细使用指南
 ├── openspec/                # openspec 变更管理（proposal/design/tasks/spec）

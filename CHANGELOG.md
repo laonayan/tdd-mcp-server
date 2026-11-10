@@ -5,6 +5,19 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本管理遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Added
+
+- 新增 `skills/` 技能资产目录（superpowers 式 `SKILL.md`：YAML frontmatter + 步骤正文）：
+  `tdd-workflow`、`test-generation`、`debugging`；`package.json` `files` 已包含 `skills`
+
+### Changed
+
+- MCP prompts 模板加载顺序调整：`tdd-workflow` / `test-generation` 提示优先读取
+  `skills/<name>/SKILL.md`（自动剥离 frontmatter），读取失败时回退 `templates/` 旧模板与
+  内联默认，保持资源 URI 与参数兼容（openspec 变更 `tdd-honesty-and-workflow` T2）
+
 ## [2.1.0] - 2026-11-10
 
 ### Added
