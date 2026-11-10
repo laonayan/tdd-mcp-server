@@ -7,11 +7,11 @@
 
 ## T2: 技能资产结构化
 
-- [ ] 2.1 创建 `skills/tdd-workflow/SKILL.md`（frontmatter + RED 证据纪律步骤）
-- [ ] 2.2 创建 `skills/test-generation/SKILL.md`（best-practices/unit-testing.md 精编）
-- [ ] 2.3 创建 `skills/debugging/SKILL.md`（四阶段根因定位 TDD 适配）
-- [ ] 2.4 `prompts.ts`：`getPrompt` 优先从 `skills/<name>/SKILL.md` 加载（frontmatter 解析 + 正文作为模板），回退内联默认；`package.json` `files` 增加 `skills`
-- [ ] 2.5 单测：skills 文件存在且 frontmatter 合法；prompts 经文件加载成功
+- [x] 2.1 创建 `skills/tdd-workflow/SKILL.md`（frontmatter + RED 证据纪律步骤）
+- [x] 2.2 创建 `skills/test-generation/SKILL.md`（best-practices/unit-testing.md 精编）
+- [x] 2.3 创建 `skills/debugging/SKILL.md`（四阶段根因定位 TDD 适配）
+- [x] 2.4 `prompts.ts`：`getPrompt` 优先从 `skills/<name>/SKILL.md` 加载（frontmatter 解析 + 正文作为模板），回退内联默认；`package.json` `files` 增加 `skills`
+- [x] 2.5 单测：skills 文件存在且 frontmatter 合法；prompts 经文件加载成功
 - [ ] 2.6 提交（按功能：资产 + 加载器可分两笔）
 
 ## T3: v2 tdd 工具接真实现
