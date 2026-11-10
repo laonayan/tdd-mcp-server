@@ -7,7 +7,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { glob } from 'glob';
+
+// ESM-compatible __dirname (package "type": "module")
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Resource definitions
 const RESOURCE_TYPES = {

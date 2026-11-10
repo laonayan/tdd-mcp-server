@@ -2,6 +2,8 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+// SDK 1.x: request schemas live in types.js; they are re-exported for
+// server use via the same module the 0.5.0 era imported them from.
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
