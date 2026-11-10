@@ -174,3 +174,6 @@ mcp-debug-*
 mcp-trace-*
 /CLAUDE.md
 /design-new-tools.md
+
+# jest 实跑产物（tdd test 子命令真实执行时生成）
+test-results.json
