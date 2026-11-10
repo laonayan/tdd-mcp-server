@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (tsc)
+        run: npm run build
+
+      - name: Unit tests (jest)
+        run: npm test
+
+      - name: Lint (eslint 9)
+        run: npm run lint
+
+      # 集成测试需要交互式 stdio 环境与 jq，暂不入 CI；
+      # 本地提交前请运行 ./integration-test.sh（见 AGENTS.md 质量门）
