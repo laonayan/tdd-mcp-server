@@ -83,6 +83,21 @@
 
 TDD 会话 SHALL 自动管理（RED→GREEN→REFACTOR 阶段跟踪），数据 SHALL 以 JSONL 格式持久化于 `~/.tdd-flow/projects/<projectId>/`，格式变更需向后兼容。
 
+#### Scenario: 自动创建会话
+
+- **WHEN** `tdd` 工具被调用且无活动会话
+- **THEN** 服务器自动创建 TDD 会话并进入 RED 阶段，会话写入 `~/.tdd-flow/projects/<projectId>/tdd-sessions.jsonl`
+
+#### Scenario: 阶段流转
+
+- **WHEN** 完整 TDD 流程执行
+- **THEN** 会话阶段按 RED→GREEN→REFACTOR 顺序更新且持久化
+
 ### Requirement: 质量门
 
 每次变更 SHALL 保持：全部单元测试通过、`tsc` 构建无错、ESLint 0 error、`integration-test.sh` 9 个场景通过。
+
+#### Scenario: 质量门全部通过
+
+- **WHEN** 变更提交前在 Node 20+ 环境执行 `npm test`、`npm run lint`、`npm run build`、`./integration-test.sh`
+- **THEN** 四项检查全部以零错误退出
