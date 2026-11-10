@@ -200,22 +200,22 @@ export class NewToolsHandler {
 
   private async handleTDDTool(args: any): Promise<CallToolResult> {
     const command = args.command;
-    
+
     // 自动管理TDD Session
     await this.ensureActiveSession(args);
-    
+
     // 对于某些子命令，不需要requirements参数
     if (!command && !args.requirements) {
       const error = this.i18nService.createLocalizedError('INVALID_PARAMS');
       return this.createErrorResult(error.message);
     }
-    
+
     if (command === 'implement' && !args.testCode) {
       return this.createErrorResult('testCode is required for implement command');
     }
-    
+
     if (!command) {
-      // 默认执行完整TDD流程
+      // 默认执行完整TDD流程（串行五步 + 容错，返回真实结果）
       await this.updateSessionStage(TDDStage.RED);
       const result = await this.executeFullTDDWorkflow(args);
       await this.updateSessionStage(TDDStage.REFACTOR);
@@ -223,46 +223,173 @@ export class NewToolsHandler {
     }
 
     switch (command) {
-      case 'generate':
+      case 'generate': {
         if (!args.requirements) {
           return this.createErrorResult('requirements is required for generate command');
         }
         await this.updateSessionStage(TDDStage.RED);
-        return this.createSuccessResult('Test cases generated successfully');
-      case 'implement':
+        // 真实调用：解析需求并生成测试用例（v1 handleGenerateTestCases 同源逻辑）
+        const generated = await this.testGenerator.generateTests({
+          requirements: args.requirements,
+          language: args.language,
+          framework: args.framework,
+          testType: args.testType,
+          existingCode: args.existingCode,
+        });
+        return this.createSuccessResult(
+          `Test cases generated successfully (${generated.tests.length} tests, ` +
+          `estimated coverage ${generated.metadata.estimatedCoverage}%):\n` +
+          JSON.stringify(generated, null, 2),
+        );
+      }
+      case 'implement': {
         await this.updateSessionStage(TDDStage.GREEN);
-        return this.createSuccessResult('Implementation code generated successfully');
-      case 'test':
-        return this.createSuccessResult('Tests executed successfully');
-      case 'coverage':
-        return this.createSuccessResult('Coverage analysis completed');
-      case 'refactor':
+        const impl = await this.codeGenerator.generateImplementation({
+          testCode: args.testCode,
+          language: args.language,
+          implementationStyle: args.implementationStyle || 'minimal',
+          architecturalConstraints: args.architecturalConstraints,
+        });
+        return this.createSuccessResult(
+          'Implementation code generated successfully:\n' +
+          JSON.stringify(impl, null, 2),
+        );
+      }
+      case 'test': {
+        const run = await this.testRunner.runTests({
+          projectPath: args.projectPath || process.env.PROJECT_PATH || process.cwd(),
+          testFiles: args.testFiles,
+          testFramework: args.framework || args.testFramework || 'jest',
+          options: args.options || {},
+        });
+        return this.createSuccessResult(
+          'Tests executed:\n' + JSON.stringify(run, null, 2),
+        );
+      }
+      case 'coverage': {
+        const coverage = await this.coverageAnalyzer.analyzeCoverage({
+          projectPath: args.projectPath || process.env.PROJECT_PATH || process.cwd(),
+          testCommand: args.testCommand,
+          thresholds: args.thresholds,
+          outputFormat: args.outputFormat || 'json',
+        });
+        return this.createSuccessResult(
+          'Coverage analysis completed:\n' + JSON.stringify(coverage, null, 2),
+        );
+      }
+      case 'refactor': {
+        if (!args.sourceCode) {
+          return this.createErrorResult('sourceCode is required for refactor command');
+        }
         await this.updateSessionStage(TDDStage.REFACTOR);
-        return this.createSuccessResult('Refactoring suggestions provided');
-      case 'validate':
-        return this.createSuccessResult('TDD cycle validation completed');
+        const refactor = await this.refactoring.refactorCode({
+          sourceCode: args.sourceCode,
+          refactorType: args.refactorType,
+          preserveTests: args.preserveTests !== false,
+          refactoringGoals: args.refactoringGoals || [],
+        });
+        return this.createSuccessResult(
+          'Refactoring suggestions provided:\n' + JSON.stringify(refactor, null, 2),
+        );
+      }
+      case 'validate': {
+        const validation = await this.tddCycleValidator.validateCycle({
+          projectPath: args.projectPath || process.env.PROJECT_PATH || process.cwd(),
+          gitHistory: args.gitHistory,
+          timeWindow: args.timeWindow || '1 hour',
+        });
+        return this.createSuccessResult(
+          'TDD cycle validation completed:\n' + JSON.stringify(validation, null, 2),
+        );
+      }
       default:
         return this.createErrorResult(`Invalid command: ${command}`);
     }
   }
 
+  /**
+   * 完整TDD流程：串行执行五步，每步附带真实产物摘要。
+   * 单步失败不中断汇总（TDD 循环中测试失败是常态信息），
+   * 只有参数级失败才在调用方以 isError 返回。
+   */
   private async executeFullTDDWorkflow(args: any): Promise<CallToolResult> {
-    const results = [];
-    
-    // RED: Generate tests
-    results.push('✅ 生成测试用例');
+    const results: string[] = [];
+    const projectPath = args.projectPath || process.env.PROJECT_PATH || process.cwd();
+
+    // RED: Generate tests —— 真实生成
+    await this.appendStepResult(results, '✅ 生成测试用例', async () => {
+      const generated = await this.testGenerator.generateTests({
+        requirements: args.requirements,
+        language: args.language,
+        framework: args.framework,
+        testType: args.testType,
+      });
+      return `${generated.tests.length} tests, estimated coverage ${generated.metadata.estimatedCoverage}%`;
+    });
     await this.updateSessionStage(TDDStage.RED);
-    
-    // GREEN: Generate implementation  
-    results.push('✅ 生成最小实现');
+
+    // GREEN: Generate implementation —— 真实生成
+    await this.appendStepResult(results, '✅ 生成最小实现', async () => {
+      const impl = await this.codeGenerator.generateImplementation({
+        testCode: args.testCode || `// requirements: ${args.requirements}`,
+        language: args.language,
+        implementationStyle: 'minimal',
+      });
+      return `${impl.imports?.length ?? 0} imports, code ${impl.code.length} chars`;
+    });
     await this.updateSessionStage(TDDStage.GREEN);
-    
-    // REFACTOR: Run tests and suggest improvements
-    results.push('✅ 运行测试');
-    results.push('✅ 分析覆盖率');
-    results.push('✅ 提供重构建议');
-    
+
+    // REFACTOR 阶段: 运行测试 —— 真实执行（失败是常态信息，记录不中断）
+    await this.appendStepResult(results, '✅ 运行测试', async () => {
+      const run = await this.testRunner.runTests({
+        projectPath,
+        testFramework: args.framework || 'jest',
+        options: {},
+      });
+      const total = run.suites.reduce((sum: number, s: any) => sum + s.tests.length, 0);
+      const passed = run.suites.reduce(
+        (sum: number, s: any) => sum + s.tests.filter((t: any) => t.status === 'passed').length,
+        0,
+      );
+      return `${passed}/${total} passed`;
+    });
+
+    await this.appendStepResult(results, '✅ 分析覆盖率', async () => {
+      try {
+        const coverage = await this.coverageAnalyzer.analyzeCoverage({
+          projectPath,
+          testCommand: args.testCommand,
+          outputFormat: 'json',
+        });
+        return `lines ${coverage.overall?.lines ?? 'N/A'}%`;
+      } catch (e) {
+        return `skipped: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    });
+
+    await this.appendStepResult(results, '✅ 提供重构建议', async () => {
+      const validation = await this.tddCycleValidator.validateCycle({
+        projectPath,
+        timeWindow: '1 hour',
+      });
+      return validation.isValid ? 'cycle valid' : 'cycle issues found';
+    });
+
     return this.createSuccessResult(`完整TDD流程执行完成:\n${results.join('\n')}`);
+  }
+
+  /** 执行单步并把真实摘要追加到结果行；失败时追加错误说明（容错） */
+  private async appendStepResult(
+    results: string[],
+    label: string,
+    step: () => Promise<string>,
+  ): Promise<void> {
+    try {
+      const summary = await step();
+      results.push(`${label}（${summary}）`);
+    } catch (error) {
+      results.push(`${label}（错误: ${error instanceof Error ? error.message : String(error)}）`);
+    }
   }
 
   private currentSessionId?: string;

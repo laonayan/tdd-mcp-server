@@ -30,7 +30,7 @@ export function parseSkill(raw: string): { frontmatter: SkillFrontmatter; body: 
 /** 模板变量插值：{{KEY}} 按 args[key] / args[KEY]（大小写不敏感）替换 */
 export function interpolate(
   template: string,
-  args: Record<string, string | undefined>
+  args: Record<string, string | undefined>,
 ): string {
   return template.replace(/\{\{([A-Z_]+)\}\}/g, (whole, key: string) => {
     const lower = key.toLowerCase();

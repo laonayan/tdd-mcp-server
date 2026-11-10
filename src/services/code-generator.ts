@@ -64,12 +64,12 @@ export class CodeGeneratorService {
     const describeMatches = testCode.match(/describe\(['"`]([^'"`]+)['"`]/g);
     const className = describeMatches?.[0]?.match(/['"`]([^'"`]+)['"`]/)?.[1] || 'TestSubject';
 
-    // Extract test cases and their expectations
-    const itMatches = testCode.match(/it\(['"`]([^'"`]+)['"`][\s\S]*?}\);?/g);
-    
+    // Extract test cases and their expectations（it/test 均为 Jest 标准写法）
+    const itMatches = testCode.match(/(?:it|test)\(['"`]([^'"`]+)['"`][\s\S]*?}\);?/g);
+
     if (itMatches) {
       for (const itBlock of itMatches) {
-        const testName = itBlock.match(/it\(['"`]([^'"`]+)['"`]/)?.[1] || '';
+        const testName = itBlock.match(/(?:it|test)\(['"`]([^'"`]+)['"`]/)?.[1] || '';
         const methodCalls = this.extractMethodCalls(itBlock);
         const expectations = this.extractExpectations(itBlock);
         

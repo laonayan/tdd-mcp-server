@@ -23,7 +23,7 @@ describe('skills assets', () => {
 
   it('tdd-workflow skill carries evidence discipline (Evidence over Claims)', async () => {
     const { body } = parseSkill(
-      await fs.readFile(path.join(skillsDir, 'tdd-workflow', 'SKILL.md'), 'utf8')
+      await fs.readFile(path.join(skillsDir, 'tdd-workflow', 'SKILL.md'), 'utf8'),
     );
     expect(body).toContain('Evidence over Claims');
     expect(body).toMatch(/RED/);
@@ -33,7 +33,7 @@ describe('skills assets', () => {
 
   it('debugging skill has four-phase process', async () => {
     const { body } = parseSkill(
-      await fs.readFile(path.join(skillsDir, 'debugging', 'SKILL.md'), 'utf8')
+      await fs.readFile(path.join(skillsDir, 'debugging', 'SKILL.md'), 'utf8'),
     );
     expect(body).toContain('Phase 1');
     expect(body).toContain('Phase 4');
@@ -42,7 +42,7 @@ describe('skills assets', () => {
   it('legacy assets remain readable (best-practices compat)', async () => {
     const bp = await fs.readFile(
       path.resolve(skillsDir, '..', 'best-practices', 'unit-testing.md'),
-      'utf8'
+      'utf8',
     );
     expect(bp.length).toBeGreaterThan(100);
   });
@@ -67,7 +67,7 @@ describe('skill-template pure functions', () => {
   it('interpolate replaces known keys and keeps unknown placeholders', () => {
     const out = interpolate(
       '语言 {{LANGUAGE}}，需求 {{REQUIREMENTS}}，未知 {{UNKNOWN_KEY}}',
-      { language: 'typescript', REQUIREMENTS: '登录' }
+      { language: 'typescript', REQUIREMENTS: '登录' },
     );
     expect(out).toContain('typescript');
     expect(out).toContain('登录');

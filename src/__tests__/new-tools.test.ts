@@ -36,29 +36,34 @@ describe('NewToolsHandler', () => {
   });
 
   describe('TDD工具调用测试', () => {
-    test('应该支持默认完整TDD流程', async () => {
+    test('应该支持默认完整TDD流程（真实结果摘要）', async () => {
       const result = await toolsHandler.callTool({
         method: 'tools/call',
         params: {
           name: 'tdd',
           arguments: {
-            requirements: '用户登录功能',
+            requirements: '用户登录功能 should authenticate user',
           },
         },
       });
 
       expect(result.content).toBeDefined();
       expect(result.isError).toBeFalsy();
+      const text = (result.content as { type: string; text: string }[])[0].text;
+      expect(text).toContain('完整TDD流程执行完成');
+      // 真实产物摘要：每步带括号内的执行证据（Evidence over Claims）
+      expect(text).toMatch(/生成测试用例（/);
+      expect(text).toMatch(/生成最小实现（/);
     });
 
-    test('应该支持generate子命令', async () => {
+    test('应该支持generate子命令（返回真实生成的测试结构）', async () => {
       const result = await toolsHandler.callTool({
         method: 'tools/call',
         params: {
           name: 'tdd',
           arguments: {
             command: 'generate',
-            requirements: '用户登录功能',
+            requirements: '用户登录功能 should authenticate with valid credentials',
             language: 'typescript',
             framework: 'jest',
             testType: 'unit',
@@ -68,13 +73,19 @@ describe('NewToolsHandler', () => {
 
       expect(result.content).toBeDefined();
       expect(result.isError).toBeFalsy();
+      const text = (result.content as { type: string; text: string }[])[0].text;
+      // 真实输出：测试数量 + JSON 结构（而非固定文案）
+      expect(text).toMatch(/Test cases generated successfully \(\d+ tests/);
+      expect(text).toContain('"tests"');
     });
 
-    test('应该支持implement子命令', async () => {
+    test('应该支持implement子命令（真实生成实现代码）', async () => {
       const testCode = `
         describe('UserLogin', () => {
           test('should login with valid credentials', () => {
-            // test implementation
+            const svc = new UserLogin();
+            const result = svc.login('user@example.com', 'pass123');
+            expect(result.success).toBe(true);
           });
         });
       `;
@@ -93,6 +104,9 @@ describe('NewToolsHandler', () => {
 
       expect(result.content).toBeDefined();
       expect(result.isError).toBeFalsy();
+      const text = (result.content as { type: string; text: string }[])[0].text;
+      expect(text).toContain('Implementation code generated successfully');
+      expect(text).toContain('"code"');
     });
 
     test('应该处理无效的子命令', async () => {
