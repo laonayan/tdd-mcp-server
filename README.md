@@ -1,10 +1,23 @@
-# TDD MCP 服务器 v2.0
+# TDD MCP 服务器 v2.1
 
 一个完整的模型上下文协议（MCP）服务器，为AI编程助手提供**简化且强大**的测试驱动开发（TDD）工作流支持。
 
-**支持的AI工具：** Claude Desktop、Claude Code、Cursor、Codeium 以及任何兼容MCP的AI助手
+**基于 MCP TypeScript SDK 1.x 构建** | **支持的AI工具：** Claude Desktop、Claude Code、Cursor、Codeium 以及任何兼容MCP的AI助手
 
-## ✨ v2.0 新特性
+## ✨ v2.1 更新要点
+
+### 🔧 MCP SDK 1.x 升级（核心）
+- **之前**: `@modelcontextprotocol/sdk` 0.5.0（2024-11 早期版本）
+- **现在**: **1.32.x**（2025-06 后的 1.x 正式线）
+- **收益**: 与新版 MCP 客户端/协议实现互通；低阶 `Server` API 行为不变，客户端零改动
+
+### 📦 工程化现代化
+- **ESM**: 包声明 `"type": "module"`，产物与运行时语义一致
+- **Node**: `engines >= 20`（Node 18 已 EOL）
+- **工具链**: TypeScript 5.9 / ESLint 9 扁平配置 / typescript-eslint 8
+- **质量门**: 134 个单测 + 9 个集成场景 + 0 lint error
+
+### 🚀 v2.0 既有特性（保留）
 
 ### 🚀 简化的工具架构
 - **之前**: 15个独立工具，使用复杂
@@ -66,7 +79,7 @@
 ## 🚀 快速开始
 
 ### 前置要求
-- Node.js 18.0.0+
+- Node.js 20.0.0+（Node 18 已于 2025-04 停止维护）
 - npm 或 yarn
 
 ### 安装步骤
@@ -457,8 +470,10 @@ tracking({
 npm run build          # 构建项目
 npm run dev           # 开发模式  
 npm run start         # 生产模式
-npm run test          # 运行测试
+npm run test          # 运行测试（CJS 转换模式，支持 jest.mock）
+npm run test:esm      # 运行测试（原生 ESM 模式，实验性）
 npm run test:watch    # 监视模式测试
+npm run lint          # ESLint 9 扁平配置
 npm run clean         # 清理构建文件
 ```
 
@@ -574,16 +589,22 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"tdd","argu
 
 ## 📈 最新更新
 
-### v2.0.0 (当前版本)
+### v2.1.0 (当前版本)
+- ✅ **SDK 升级**: `@modelcontextprotocol/sdk` 0.5.0 → 1.32.2，兼容新版 MCP 客户端
+- ✅ **ESM 化**: `"type": "module"` + `import.meta.url` 路径解析
+- ✅ **工具链**: TypeScript 5.9 / ESLint 9 / Node ≥20
+- ✅ **修复**: ESLint 9 发现的不可达分支与 20 处多余转义
+- ✅ **清理**: 移除 6 个根目录临时绕过脚本
+
+### v2.0.0
 - ✅ **架构简化**: 15个工具合并为3个主工具 + 子命令
 - ✅ **国际化**: 完整中英文支持，默认中文界面
 - ✅ **自动化**: Session自动管理，智能TDD流程
 - ✅ **兼容性**: 保持对v1.0工具系统的完整向后兼容
-- ✅ **测试覆盖**: 115个测试用例，包含9个集成测试场景
 
 ### 测试状态
-- **单元测试**: 111个通过 ✅
-- **集成测试**: 9个场景全部通过 ✅  
+- **单元测试**: 134个通过 ✅（含 23 个迁移守卫测试）
+- **集成测试**: 9个场景全部通过 ✅（SDK 1.32.2 实测）  
 - **构建状态**: 无错误 ✅
 - **兼容性**: 新旧工具系统都正常工作 ✅
 
@@ -607,7 +628,8 @@ tdd-mcp-server/
 │   └── types/                # TypeScript类型定义
 ├── examples/
 │   └── v2-usage-guide.md    # v2.0详细使用指南
-├── CLAUDE.md                # Claude Code指导文档
+├── openspec/                # openspec 变更管理（proposal/design/tasks/spec）
+├── CHANGELOG.md             # 版本变更日志
 ├── integration-test.sh      # 集成测试脚本
 └── dist/                    # 构建输出
 ```
