@@ -37,7 +37,7 @@ describe('StorageService - Basic Tests', () => {
         priority: FeaturePriority.HIGH,
         acceptanceCriteria: ['User can login'],
         createdAt: new Date('2024-01-01T10:00:00Z'),
-        updatedAt: new Date('2024-01-01T10:00:00Z')
+        updatedAt: new Date('2024-01-01T10:00:00Z'),
       };
 
       // Act
@@ -51,7 +51,7 @@ describe('StorageService - Basic Tests', () => {
     it('should reject invalid feature data', async () => {
       // Arrange
       const invalidFeature = {
-        name: 'Test Feature'
+        name: 'Test Feature',
         // Missing required fields
       } as any;
 
@@ -84,7 +84,7 @@ describe('StorageService - Basic Tests', () => {
         priority: FeaturePriority.HIGH,
         acceptanceCriteria: ['User can login'],
         createdAt: new Date('2024-01-01T10:00:00Z'),
-        updatedAt: new Date('2024-01-01T10:00:00Z')
+        updatedAt: new Date('2024-01-01T10:00:00Z'),
       };
       
       const jsonlContent = JSON.stringify(mockFeature) + '\n';

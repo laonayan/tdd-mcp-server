@@ -13,7 +13,7 @@ import {
   FeatureSchema,
   TDDSessionSchema,
   TestMethodSchema,
-  FileAssociationSchema
+  FileAssociationSchema,
 } from '../types/storage.js';
 
 export class StorageService implements IStorageService {

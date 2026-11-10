@@ -2,11 +2,11 @@ import { CoverageAnalyzerService } from '../coverage-analyzer.js';
 
 // Mock modules before importing
 jest.mock('child_process', () => ({
-  exec: jest.fn()
+  exec: jest.fn(),
 }));
 
 jest.mock('util', () => ({
-  promisify: jest.fn()
+  promisify: jest.fn(),
 }));
 
 jest.mock('fs', () => ({
@@ -14,7 +14,7 @@ jest.mock('fs', () => ({
     stat: jest.fn(),
     readFile: jest.fn(),
     access: jest.fn(),
-  }
+  },
 }));
 
 import { exec } from 'child_process';
@@ -46,11 +46,11 @@ describe('CoverageAnalyzerService', () => {
     it('should throw error for invalid project path', async () => {
       const params = {
         projectPath: '/invalid/path',
-        testCommand: 'jest'
+        testCommand: 'jest',
       };
 
       jest.spyOn(coverageAnalyzer as any, 'validateProjectPath').mockRejectedValue(
-        new Error('Coverage analysis failed: Invalid project path: /invalid/path')
+        new Error('Coverage analysis failed: Invalid project path: /invalid/path'),
       );
 
       await expect(coverageAnalyzer.analyzeCoverage(params))
@@ -197,9 +197,9 @@ end_of_record`;
           'src/test.js': {
             lines: { total: 10, covered: 8 },
             functions: { total: 2, covered: 2 },
-            branches: { total: 4, covered: 3 }
-          }
-        }
+            branches: { total: 4, covered: 3 },
+          },
+        },
       };
 
       const thresholds = { lines: 80, functions: 85, branches: 75, statements: 80 };

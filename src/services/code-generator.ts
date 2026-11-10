@@ -198,11 +198,11 @@ export class CodeGeneratorService {
   private generateJavaScriptCode(
     className: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const methods = this.extractUniqueMethods(requirements);
     const methodImplementations = methods.map(method => 
-      this.generateJavaScriptMethod(method, requirements, params)
+      this.generateJavaScriptMethod(method, requirements, params),
     ).join('\n\n  ');
 
     if (params.language === SupportedLanguage.TYPESCRIPT) {
@@ -221,11 +221,11 @@ module.exports = ${className};`;
   private generatePythonCode(
     className: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const methods = this.extractUniqueMethods(requirements);
     const methodImplementations = methods.map(method => 
-      this.generatePythonMethod(method, requirements, params)
+      this.generatePythonMethod(method, requirements, params),
     ).join('\n\n    ');
 
     return `class ${className}:
@@ -237,11 +237,11 @@ module.exports = ${className};`;
   private generateJavaCode(
     className: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const methods = this.extractUniqueMethods(requirements);
     const methodImplementations = methods.map(method => 
-      this.generateJavaMethod(method, requirements, params)
+      this.generateJavaMethod(method, requirements, params),
     ).join('\n\n    ');
 
     return `public class ${className} {
@@ -252,11 +252,11 @@ module.exports = ${className};`;
   private generateCSharpCode(
     className: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const methods = this.extractUniqueMethods(requirements);
     const methodImplementations = methods.map(method => 
-      this.generateCSharpMethod(method, requirements, params)
+      this.generateCSharpMethod(method, requirements, params),
     ).join('\n\n    ');
 
     return `public class ${className}
@@ -268,10 +268,10 @@ module.exports = ${className};`;
   private generateJavaScriptMethod(
     methodName: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const relevantReqs = requirements.filter(req => 
-      req.methodCalls.some(call => call.includes(methodName))
+      req.methodCalls.some(call => call.includes(methodName)),
     );
 
     const shouldThrow = relevantReqs.some(req => req.shouldThrow);
@@ -293,10 +293,10 @@ module.exports = ${className};`;
   private generatePythonMethod(
     methodName: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const relevantReqs = requirements.filter(req => 
-      req.methodCalls.some(call => call.includes(methodName))
+      req.methodCalls.some(call => call.includes(methodName)),
     );
 
     const shouldThrow = relevantReqs.some(req => req.shouldThrow);
@@ -309,16 +309,16 @@ module.exports = ${className};`;
     }
 
     const parameters = this.inferParameters(relevantReqs);
-    return `def ${methodName}(self, ${parameters}):\n        \"\"\"${methodName} implementation based on tests.\"\"\"\n        ${this.generateMethodBody(methodName, relevantReqs, params)}`;
+    return `def ${methodName}(self, ${parameters}):\n        """${methodName} implementation based on tests."""\n        ${this.generateMethodBody(methodName, relevantReqs, params)}`;
   }
 
   private generateJavaMethod(
     methodName: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const relevantReqs = requirements.filter(req => 
-      req.methodCalls.some(call => call.includes(methodName))
+      req.methodCalls.some(call => call.includes(methodName)),
     );
 
     const shouldThrow = relevantReqs.some(req => req.shouldThrow);
@@ -338,10 +338,10 @@ module.exports = ${className};`;
   private generateCSharpMethod(
     methodName: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     const relevantReqs = requirements.filter(req => 
-      req.methodCalls.some(call => call.includes(methodName))
+      req.methodCalls.some(call => call.includes(methodName)),
     );
 
     const shouldThrow = relevantReqs.some(req => req.shouldThrow);
@@ -514,7 +514,7 @@ module.exports = ${className};`;
   private inferReturnType(requirements: TestRequirement[]): string {
     // Simple heuristic to infer return type from expectations
     const hasNumericExpectations = requirements.some(req => 
-      req.expectations.some(exp => /\d+/.test(exp))
+      req.expectations.some(exp => /\d+/.test(exp)),
     );
     
     if (hasNumericExpectations) return 'number';
@@ -545,7 +545,7 @@ module.exports = ${className};`;
   private generateMethodBody(
     methodName: string,
     requirements: TestRequirement[],
-    params: CodeGenerationParams
+    params: CodeGenerationParams,
   ): string {
     if (params.implementationStyle === 'minimal') {
       return '// Minimal implementation to pass tests\n        return null;';

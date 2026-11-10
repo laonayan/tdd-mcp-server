@@ -72,7 +72,7 @@ const messages: I18nMessages = {
     'error.validation_failed': 'Validation failed for field: {{field}}',
     'error.invalid_params': 'Input parameter validation failed',
     'error.tool_execution_failed': 'Tool execution failed',
-  }
+  },
 };
 
 // 错误代码映射
@@ -147,7 +147,7 @@ export class I18nService {
   createLocalizedError(
     errorType: keyof typeof errorCodes,
     locale?: SupportedLocale,
-    data?: unknown
+    data?: unknown,
   ): LocalizedError {
     const targetLocale = locale || this.currentLocale;
     
@@ -158,7 +158,7 @@ export class I18nService {
     return {
       code: errorCodes[errorType],
       message,
-      data
+      data,
     };
   }
 

@@ -35,7 +35,7 @@ export const resourcesHandler = {
         resources.push({
           uri: `${RESOURCE_TYPES.TEST_FILES}/${path.relative(projectPath, testFile)}`,
           name: `Test: ${path.basename(testFile)}`,
-          description: `Test file containing unit/integration tests`,
+          description: 'Test file containing unit/integration tests',
           mimeType: getMimeTypeForFile(testFile),
         });
       }
@@ -46,7 +46,7 @@ export const resourcesHandler = {
         resources.push({
           uri: `${RESOURCE_TYPES.IMPLEMENTATION_FILES}/${path.relative(projectPath, implFile)}`,
           name: `Implementation: ${path.basename(implFile)}`,
-          description: `Implementation file containing production code`,
+          description: 'Implementation file containing production code',
           mimeType: getMimeTypeForFile(implFile),
         });
       }

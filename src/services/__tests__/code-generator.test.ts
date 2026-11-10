@@ -23,7 +23,7 @@ describe('CodeGeneratorService', () => {
       const result = await codeGenerator.generateImplementation({
         testCode,
         language: SupportedLanguage.TYPESCRIPT,
-        implementationStyle: 'minimal'
+        implementationStyle: 'minimal',
       });
 
       expect(result.language).toBe(SupportedLanguage.TYPESCRIPT);
@@ -43,7 +43,7 @@ describe('CodeGeneratorService', () => {
       const result = await codeGenerator.generateImplementation({
         testCode,
         language: SupportedLanguage.PYTHON,
-        implementationStyle: 'comprehensive'
+        implementationStyle: 'comprehensive',
       });
 
       expect(result.language).toBe(SupportedLanguage.PYTHON);
@@ -56,7 +56,7 @@ describe('CodeGeneratorService', () => {
       await expect(codeGenerator.generateImplementation({
         testCode: 'some test',
         language: 'unsupported' as SupportedLanguage,
-        implementationStyle: 'minimal'
+        implementationStyle: 'minimal',
       })).rejects.toThrow('Test parsing not implemented for language: unsupported');
     });
 
@@ -64,7 +64,7 @@ describe('CodeGeneratorService', () => {
       await expect(codeGenerator.generateImplementation({
         testCode: '',
         language: SupportedLanguage.TYPESCRIPT,
-        implementationStyle: 'minimal'
+        implementationStyle: 'minimal',
       })).rejects.toThrow('No requirements could be parsed from test code');
     });
   });
@@ -155,13 +155,13 @@ describe('CodeGeneratorService', () => {
         testName: 'test',
         methodCalls: ['testMethod'],
         expectations: [],
-        shouldThrow: false
+        shouldThrow: false,
       }];
 
       const params = {
         testCode: '',
         language: SupportedLanguage.TYPESCRIPT,
-        implementationStyle: 'minimal' as const
+        implementationStyle: 'minimal' as const,
       };
 
       const codeGeneratorAny = codeGenerator as any;
@@ -177,13 +177,13 @@ describe('CodeGeneratorService', () => {
         testName: 'test',
         methodCalls: ['testMethod'],
         expectations: [],
-        shouldThrow: false
+        shouldThrow: false,
       }];
 
       const params = {
         testCode: '',
         language: SupportedLanguage.JAVASCRIPT,
-        implementationStyle: 'minimal' as const
+        implementationStyle: 'minimal' as const,
       };
 
       const codeGeneratorAny = codeGenerator as any;
@@ -201,13 +201,13 @@ describe('CodeGeneratorService', () => {
         testName: 'test',
         methodCalls: ['throwMethod'],
         expectations: [],
-        shouldThrow: true
+        shouldThrow: true,
       }];
 
       const params = {
         testCode: '',
         language: SupportedLanguage.TYPESCRIPT,
-        implementationStyle: 'minimal' as const
+        implementationStyle: 'minimal' as const,
       };
 
       const codeGeneratorAny = codeGenerator as any;
@@ -222,13 +222,13 @@ describe('CodeGeneratorService', () => {
         testName: 'test',
         methodCalls: ['normalMethod'],
         expectations: [],
-        shouldThrow: false
+        shouldThrow: false,
       }];
 
       const params = {
         testCode: '',
         language: SupportedLanguage.TYPESCRIPT,
-        implementationStyle: 'minimal' as const
+        implementationStyle: 'minimal' as const,
       };
 
       const codeGeneratorAny = codeGenerator as any;
@@ -281,15 +281,15 @@ describe('CodeGeneratorService', () => {
           testName: 'test1',
           methodCalls: ['method1', 'method2'],
           expectations: [],
-          shouldThrow: false
+          shouldThrow: false,
         },
         {
           className: 'Test',
           testName: 'test2',
           methodCalls: ['method1', 'method3'],
           expectations: [],
-          shouldThrow: false
-        }
+          shouldThrow: false,
+        },
       ];
 
       const codeGeneratorAny = codeGenerator as any;
@@ -339,7 +339,7 @@ describe('CodeGeneratorService', () => {
         testName: 'test',
         methodCalls: [],
         expectations: [],
-        shouldThrow: true
+        shouldThrow: true,
       }];
 
       const codeGeneratorAny = codeGenerator as any;

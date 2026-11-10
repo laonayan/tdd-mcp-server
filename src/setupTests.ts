@@ -1,11 +1,9 @@
 // Jest setup file for TDD MCP Server tests
 
-// Extend Jest matchers
-import '@jest/globals';
+import { jest } from '@jest/globals';
 
 // Mock console methods to reduce noise in tests
 const originalConsole = global.console;
-
 beforeAll(() => {
   global.console = {
     ...originalConsole,
@@ -16,7 +14,7 @@ beforeAll(() => {
     info: jest.fn(),
     debug: jest.fn(),
     log: jest.fn(),
-  } as any;
+  } as typeof console;
 });
 
 afterAll(() => {

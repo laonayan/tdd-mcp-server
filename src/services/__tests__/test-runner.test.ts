@@ -2,17 +2,24 @@ import { TestRunnerService } from '../test-runner.js';
 import { TestResults } from '../../types/tdd.js';
 import * as fs from 'fs';
 import { exec } from 'child_process';
+import * as util from 'util';
 
 // Mock child_process exec
 jest.mock('child_process');
 const mockExec = exec as jest.MockedFunction<typeof exec>;
+
+// Mock util.promisify（通过模块工厂）
+jest.mock('util', () => ({
+  ...jest.requireActual('util'),
+  promisify: jest.fn(),
+}));
 
 // Mock fs
 jest.mock('fs', () => ({
   promises: {
     stat: jest.fn(),
     readFile: jest.fn(),
-  }
+  },
 }));
 
 const mockFs = fs as jest.Mocked<typeof fs>;
@@ -25,9 +32,14 @@ describe('TestRunnerService', () => {
     testRunner = new TestRunnerService();
     jest.clearAllMocks();
     
-    // Mock promisify(exec)
+    // promisify 的 mock：util 模块属性不可改写且不可 spyOn。
+    // 保留 mockExecAsync 供现有断言使用；promisify 行为由下方
+    // jest.mock('util') 工厂接管（见文件顶部）。
     mockExecAsync = jest.fn();
-    require('util').promisify = jest.fn(() => mockExecAsync);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('runTests', () => {
@@ -40,7 +52,7 @@ describe('TestRunnerService', () => {
     it('should handle unsupported framework', async () => {
       const params = {
         projectPath: '/test/project',
-        testFramework: 'unsupported-framework'
+        testFramework: 'unsupported-framework',
       };
 
       await expect(testRunner.runTests(params))
@@ -50,7 +62,7 @@ describe('TestRunnerService', () => {
     it('should handle invalid project path', async () => {
       const params = {
         projectPath: '/invalid/path',
-        testFramework: 'jest'
+        testFramework: 'jest',
       };
 
       mockFs.promises.stat = jest.fn().mockRejectedValue(new Error('Path not found'));
@@ -98,8 +110,8 @@ describe('TestRunnerService', () => {
         key: 'jest',
         commands: {
           run: 'jest',
-          coverage: 'jest --coverage'
-        }
+          coverage: 'jest --coverage',
+        },
       };
 
       const params = {
@@ -109,8 +121,8 @@ describe('TestRunnerService', () => {
         options: {
           verbose: true,
           coverage: true,
-          parallel: true
-        }
+          parallel: true,
+        },
       };
 
       const testRunnerAny = testRunner as any;
@@ -127,14 +139,14 @@ describe('TestRunnerService', () => {
         key: 'pytest',
         commands: {
           run: 'pytest',
-          coverage: 'pytest --cov'
-        }
+          coverage: 'pytest --cov',
+        },
       };
 
       const params = {
         projectPath: '/test',
         testFramework: 'pytest',
-        options: { verbose: true, parallel: true }
+        options: { verbose: true, parallel: true },
       };
 
       const testRunnerAny = testRunner as any;
@@ -168,16 +180,16 @@ describe('TestRunnerService', () => {
             {
               title: 'should pass',
               status: 'passed',
-              duration: 100
+              duration: 100,
             },
             {
               title: 'should fail',
               status: 'failed',
               duration: 50,
-              failureMessages: ['Error message']
-            }
-          ]
-        }]
+              failureMessages: ['Error message'],
+            },
+          ],
+        }],
       };
 
       const testRunnerAny = testRunner as any;
@@ -200,13 +212,13 @@ describe('TestRunnerService', () => {
           tests: [{
             title: 'should work',
             state: 'passed',
-            duration: 100
+            duration: 100,
           }],
-          suites: []
+          suites: [],
         }],
         stats: {
-          duration: 1000
-        }
+          duration: 1000,
+        },
       };
 
       const testRunnerAny = testRunner as any;
@@ -256,11 +268,11 @@ describe('TestRunnerService', () => {
     it('should calculate coverage correctly', () => {
       const coverageMap = {
         'file1.js': {
-          s: { '1': 1, '2': 0, '3': 1 } // 2 out of 3 covered
+          s: { '1': 1, '2': 0, '3': 1 }, // 2 out of 3 covered
         },
         'file2.js': {
-          s: { '1': 1, '2': 1 } // 2 out of 2 covered
-        }
+          s: { '1': 1, '2': 1 }, // 2 out of 2 covered
+        },
       };
 
       const testRunnerAny = testRunner as any;

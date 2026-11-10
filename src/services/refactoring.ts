@@ -22,7 +22,7 @@ export class RefactoringService {
       sourceCode,
       refactorType,
       analysis,
-      refactoringGoals
+      refactoringGoals,
     );
 
     // Apply refactorings
@@ -68,8 +68,6 @@ export class RefactoringService {
       return 'python';
     } else if (sourceCode.includes('public class ') || sourceCode.includes('private ') || sourceCode.includes('public ')) {
       return 'java';
-    } else if (sourceCode.includes('public class ') && sourceCode.includes('using ')) {
-      return 'csharp';
     } else if (sourceCode.includes('func ') || sourceCode.includes('type ') || sourceCode.includes('package ')) {
       return 'go';
     } else if (sourceCode.includes('fn ') || sourceCode.includes('impl ') || sourceCode.includes('struct ')) {
@@ -92,8 +90,8 @@ export class RefactoringService {
       /switch\s*\(/g,
       /case\s+/g,
       /catch\s*\(/g,
-      /\&\&/g,
-      /\|\|/g,
+      /&&/g,
+      /||/g,
       /\?/g, // Ternary operator
     ];
 
@@ -153,7 +151,7 @@ export class RefactoringService {
     
     for (const dup of sorted) {
       const overlaps = result.some(existing => 
-        this.duplicationsOverlap(dup, existing)
+        this.duplicationsOverlap(dup, existing),
       );
       
       if (!overlaps) {
@@ -211,7 +209,7 @@ export class RefactoringService {
           endLine,
           length: methodLength,
           complexity: this.calculateMethodComplexity(
-            sourceCode.substring(startIndex, methodEndIndex)
+            sourceCode.substring(startIndex, methodEndIndex),
           ),
         });
       }
@@ -257,7 +255,7 @@ export class RefactoringService {
           continue;
         }
         
-        if (char === '"' || char === "'" || char === '`') {
+        if (char === '"' || char === '\'' || char === '`') {
           inString = true;
           stringChar = char;
           continue;
@@ -373,12 +371,12 @@ export class RefactoringService {
     const conditionals: ConditionalInfo[] = [];
     
     // Find complex if statements
-    const complexIfPattern = /if\s*\([^)]*(?:\&\&|\|\|)[^)]*(?:\&\&|\|\|)[^)]*\)/g;
+    const complexIfPattern = /if\s*\([^)]*(?:&&|||)[^)]*(?:&&|||)[^)]*\)/g;
     let match;
     
     while ((match = complexIfPattern.exec(sourceCode)) !== null) {
       const line = sourceCode.substring(0, match.index).split('\n').length;
-      const conditionCount = (match[0].match(/(\&\&|\|\|)/g) || []).length + 1;
+      const conditionCount = (match[0].match(/(&&|||)/g) || []).length + 1;
       
       conditionals.push({
         line,
@@ -395,7 +393,7 @@ export class RefactoringService {
     sourceCode: string,
     refactorType: string,
     analysis: CodeAnalysis,
-    goals: string[]
+    goals: string[],
   ): Promise<Refactoring[]> {
     const refactorings: Refactoring[] = [];
 
@@ -599,7 +597,7 @@ export class RefactoringService {
 
   private simplifyCondition(condition: string): string {
     // Extract complex conditions into boolean variables
-    const parts = condition.split(/(\&\&|\|\|)/).filter(part => part.trim() !== '');
+    const parts = condition.split(/(&&|||)/).filter(part => part.trim() !== '');
     
     let result = '// Extract conditions:\n';
     const variables: string[] = [];

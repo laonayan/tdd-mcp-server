@@ -7,7 +7,7 @@ import {
   FileAssociation,
   CreateFeatureParams,
   UpdateFeatureStatusParams,
-  LinkFeatureFilesParams
+  LinkFeatureFilesParams,
 } from '../types/storage.js';
 
 export interface SimilarFeature {
@@ -54,7 +54,7 @@ export class FeatureManagementService {
       updatedAt: now,
       tags: params.tags || [],
       estimatedHours: params.estimatedHours,
-      assignee: params.assignee
+      assignee: params.assignee,
     };
 
     // 保存到存储
@@ -78,7 +78,7 @@ export class FeatureManagementService {
     const updatedFeature: Feature = {
       ...existingFeature,
       status: params.status,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     // 如果提供了进度信息，更新进度
@@ -86,14 +86,14 @@ export class FeatureManagementService {
       const existingProgress = existingFeature.progress || {
         testsWritten: 0,
         testsPass: 0,
-        implementationFiles: []
+        implementationFiles: [],
       };
       
       updatedFeature.progress = {
         testsWritten: params.progress.testsWritten ?? existingProgress.testsWritten,
         testsPass: params.progress.testsPass ?? existingProgress.testsPass,
         implementationFiles: params.progress.implementationFiles ?? existingProgress.implementationFiles,
-        coveragePercentage: params.progress.coveragePercentage ?? existingProgress.coveragePercentage
+        coveragePercentage: params.progress.coveragePercentage ?? existingProgress.coveragePercentage,
       };
     }
 
@@ -124,7 +124,7 @@ export class FeatureManagementService {
         createdAt: now,
         lastModified: now,
         size: 0,
-        lineCount: undefined
+        lineCount: undefined,
       };
 
       await this.storageService.saveFileAssociation(association);
@@ -141,7 +141,7 @@ export class FeatureManagementService {
     query: string, 
     projectId: string, 
     maxResults: number = 10,
-    minSimilarity: number = 0.3
+    minSimilarity: number = 0.3,
   ): Promise<SimilarFeature[]> {
     const features = await this.storageService.listFeatures(projectId);
     const queryLower = query.toLowerCase();
@@ -156,7 +156,7 @@ export class FeatureManagementService {
         similarities.push({
           feature,
           similarity: similarity.score,
-          reasons: similarity.reasons
+          reasons: similarity.reasons,
         });
       }
     }
@@ -173,7 +173,7 @@ export class FeatureManagementService {
   private calculateFeatureSimilarity(
     feature: Feature, 
     queryWords: string[], 
-    queryLower: string
+    queryLower: string,
   ): { score: number; reasons: string[] } {
     const reasons: string[] = [];
     let totalScore = 0;
@@ -201,7 +201,7 @@ export class FeatureManagementService {
       totalScore += tagScore * 0.2;
       maxPossibleScore += 0.2;
       if (tagScore > 0) {
-        reasons.push(`Tag matches found`);
+        reasons.push('Tag matches found');
       }
     }
 
@@ -218,7 +218,7 @@ export class FeatureManagementService {
     
     return {
       score: Math.min(normalizedScore, 1), // 确保分数不超过1
-      reasons
+      reasons,
     };
   }
 
@@ -247,7 +247,7 @@ export class FeatureManagementService {
       }
       // 部分匹配（包含关系）
       else if (textWords.some(textWord => 
-        textWord.includes(queryWordLower) || queryWordLower.includes(textWord)
+        textWord.includes(queryWordLower) || queryWordLower.includes(textWord),
       )) {
         partialMatches += 0.7; // 部分匹配权重较低
       }

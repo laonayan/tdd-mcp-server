@@ -724,7 +724,7 @@ async function handleFindSimilarFeatures(args: any): Promise<CallToolResult> {
     args.query,
     projectId,
     args.maxResults,
-    args.minSimilarity
+    args.minSimilarity,
   );
 
   return {

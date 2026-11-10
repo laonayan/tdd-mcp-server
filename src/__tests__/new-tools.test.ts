@@ -42,9 +42,9 @@ describe('NewToolsHandler', () => {
         params: {
           name: 'tdd',
           arguments: {
-            requirements: '用户登录功能'
-          }
-        }
+            requirements: '用户登录功能',
+          },
+        },
       });
 
       expect(result.content).toBeDefined();
@@ -61,9 +61,9 @@ describe('NewToolsHandler', () => {
             requirements: '用户登录功能',
             language: 'typescript',
             framework: 'jest',
-            testType: 'unit'
-          }
-        }
+            testType: 'unit',
+          },
+        },
       });
 
       expect(result.content).toBeDefined();
@@ -86,9 +86,9 @@ describe('NewToolsHandler', () => {
           arguments: {
             command: 'implement',
             testCode,
-            language: 'typescript'
-          }
-        }
+            language: 'typescript',
+          },
+        },
       });
 
       expect(result.content).toBeDefined();
@@ -102,9 +102,9 @@ describe('NewToolsHandler', () => {
           name: 'tdd',
           arguments: {
             command: 'invalid',
-            requirements: '测试'
-          }
-        }
+            requirements: '测试',
+          },
+        },
       });
 
       expect(result.isError).toBe(true);
@@ -120,9 +120,9 @@ describe('NewToolsHandler', () => {
           name: 'feature',
           arguments: {
             name: '用户认证',
-            description: '实现用户登录和注册功能'
-          }
-        }
+            description: '实现用户登录和注册功能',
+          },
+        },
       });
 
       expect(result.content).toBeDefined();
@@ -136,9 +136,9 @@ describe('NewToolsHandler', () => {
           name: 'feature',
           arguments: {
             command: 'find',
-            query: '用户登录'
-          }
-        }
+            query: '用户登录',
+          },
+        },
       });
 
       expect(result.content).toBeDefined();
@@ -156,9 +156,9 @@ describe('NewToolsHandler', () => {
             featureId: 'feature-123',
             name: 'test_user_login',
             filePath: './src/__tests__/user.test.ts',
-            framework: 'jest'
-          }
-        }
+            framework: 'jest',
+          },
+        },
       });
 
       expect(result.content).toBeDefined();
@@ -172,8 +172,8 @@ describe('NewToolsHandler', () => {
         method: 'tools/call',
         params: {
           name: 'unknown',
-          arguments: {}
-        }
+          arguments: {},
+        },
       });
 
       expect(result.isError).toBe(true);
@@ -187,8 +187,8 @@ describe('NewToolsHandler', () => {
           name: 'tdd',
           arguments: {
             // 缺少 requirements
-          }
-        }
+          },
+        },
       });
 
       expect(result.isError).toBe(true);
@@ -201,8 +201,8 @@ describe('NewToolsHandler', () => {
         params: {
           name: 'tdd',
           arguments: {
-          }
-        }
+          },
+        },
       });
 
       expect(result.isError).toBe(true);

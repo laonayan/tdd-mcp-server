@@ -372,7 +372,7 @@ export class CoverageAnalyzerService {
 
   private generateCoverageReport(
     coverageData: any,
-    thresholds?: CoverageAnalysisParams['thresholds']
+    thresholds?: CoverageAnalysisParams['thresholds'],
   ): CoverageReport {
     const files: CoverageFile[] = [];
     
@@ -413,7 +413,7 @@ export class CoverageAnalyzerService {
         covered: fileData.lines?.covered || 0,
         percentage: this.calculatePercentage(
           fileData.lines?.covered || 0,
-          fileData.lines?.total || 0
+          fileData.lines?.total || 0,
         ),
       },
       functions: {
@@ -421,7 +421,7 @@ export class CoverageAnalyzerService {
         covered: fileData.functions?.covered || 0,
         percentage: this.calculatePercentage(
           fileData.functions?.covered || 0,
-          fileData.functions?.total || 0
+          fileData.functions?.total || 0,
         ),
       },
       branches: {
@@ -429,7 +429,7 @@ export class CoverageAnalyzerService {
         covered: fileData.branches?.covered || 0,
         percentage: this.calculatePercentage(
           fileData.branches?.covered || 0,
-          fileData.branches?.total || 0
+          fileData.branches?.total || 0,
         ),
       },
     };

@@ -43,7 +43,7 @@ export class NewToolsHandler {
     const tools: Tool[] = [
       this.createTDDTool(locale),
       this.createFeatureTool(locale),
-      this.createTrackingTool(locale)
+      this.createTrackingTool(locale),
     ];
 
     return { tools };
@@ -64,46 +64,46 @@ export class NewToolsHandler {
             enum: ['generate', 'implement', 'test', 'coverage', 'refactor', 'validate'],
             description: locale === 'zh' ? 
               '子命令（可选，默认执行完整流程）' : 
-              'Subcommand (optional, default full workflow)'
+              'Subcommand (optional, default full workflow)',
           },
           requirements: {
             type: 'string',
-            description: locale === 'zh' ? '功能需求描述' : 'Feature requirements description'
+            description: locale === 'zh' ? '功能需求描述' : 'Feature requirements description',
           },
           language: {
             type: 'string',
             enum: ['typescript', 'javascript', 'python', 'java', 'csharp', 'go', 'rust', 'php'],
-            description: locale === 'zh' ? '编程语言' : 'Programming language'
+            description: locale === 'zh' ? '编程语言' : 'Programming language',
           },
           framework: {
             type: 'string',
-            description: locale === 'zh' ? '测试框架' : 'Testing framework'
+            description: locale === 'zh' ? '测试框架' : 'Testing framework',
           },
           testType: {
             type: 'string',
             enum: ['unit', 'integration', 'e2e', 'performance'],
-            description: locale === 'zh' ? '测试类型' : 'Test type'
+            description: locale === 'zh' ? '测试类型' : 'Test type',
           },
           testCode: {
             type: 'string',
-            description: locale === 'zh' ? '测试代码' : 'Test code'
+            description: locale === 'zh' ? '测试代码' : 'Test code',
           },
           implementationStyle: {
             type: 'string',
             enum: ['minimal', 'comprehensive', 'production-ready'],
-            description: locale === 'zh' ? '实现风格' : 'Implementation style'
+            description: locale === 'zh' ? '实现风格' : 'Implementation style',
           },
           projectPath: {
             type: 'string',
-            description: locale === 'zh' ? '项目路径' : 'Project path'
+            description: locale === 'zh' ? '项目路径' : 'Project path',
           },
           sourceCode: {
             type: 'string',
-            description: locale === 'zh' ? '源代码' : 'Source code'
-          }
+            description: locale === 'zh' ? '源代码' : 'Source code',
+          },
         },
-        required: ['requirements']
-      }
+        required: ['requirements'],
+      },
     };
   }
 
@@ -119,27 +119,27 @@ export class NewToolsHandler {
           command: {
             type: 'string',
             enum: ['create', 'update', 'link', 'find'],
-            description: locale === 'zh' ? '功能管理操作' : 'Feature management operation'
+            description: locale === 'zh' ? '功能管理操作' : 'Feature management operation',
           },
           name: {
             type: 'string',
-            description: locale === 'zh' ? '功能名称' : 'Feature name'
+            description: locale === 'zh' ? '功能名称' : 'Feature name',
           },
           description: {
             type: 'string',
-            description: locale === 'zh' ? '功能描述' : 'Feature description'
+            description: locale === 'zh' ? '功能描述' : 'Feature description',
           },
           query: {
             type: 'string',
-            description: locale === 'zh' ? '搜索查询' : 'Search query'
+            description: locale === 'zh' ? '搜索查询' : 'Search query',
           },
           featureId: {
             type: 'string',
-            description: locale === 'zh' ? '功能ID' : 'Feature ID'
-          }
+            description: locale === 'zh' ? '功能ID' : 'Feature ID',
+          },
         },
-        required: ['name']
-      }
+        required: ['name'],
+      },
     };
   }
 
@@ -155,26 +155,26 @@ export class NewToolsHandler {
           command: {
             type: 'string',
             enum: ['register', 'result', 'status'],
-            description: locale === 'zh' ? '跟踪操作' : 'Tracking operation'
+            description: locale === 'zh' ? '跟踪操作' : 'Tracking operation',
           },
           featureId: {
             type: 'string',
-            description: locale === 'zh' ? '功能ID' : 'Feature ID'
+            description: locale === 'zh' ? '功能ID' : 'Feature ID',
           },
           name: {
             type: 'string',
-            description: locale === 'zh' ? '测试方法名' : 'Test method name'
+            description: locale === 'zh' ? '测试方法名' : 'Test method name',
           },
           filePath: {
             type: 'string',
-            description: locale === 'zh' ? '测试文件路径' : 'Test file path'
+            description: locale === 'zh' ? '测试文件路径' : 'Test file path',
           },
           framework: {
             type: 'string',
-            description: locale === 'zh' ? '测试框架' : 'Testing framework'
-          }
-        }
-      }
+            description: locale === 'zh' ? '测试框架' : 'Testing framework',
+          },
+        },
+      },
     };
   }
 
@@ -341,8 +341,8 @@ export class NewToolsHandler {
     return {
       content: [{
         type: 'text',
-        text: message
-      }]
+        text: message,
+      }],
     };
   }
 
@@ -351,8 +351,8 @@ export class NewToolsHandler {
       isError: true,
       content: [{
         type: 'text',
-        text: message
-      }]
+        text: message,
+      }],
     };
   }
 }

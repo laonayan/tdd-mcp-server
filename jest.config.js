@@ -1,20 +1,25 @@
 /** @type {import('jest').Config} */
 export default {
-  preset: 'ts-jest/presets/default-esm',
-  extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true,
-    },
-  },
+  // CJS transform mode: ts-jest compiles TS to CommonJS so that jest.mock()
+  // hoisting and module interception keep working (native ESM mode does not
+  // support jest.mock factories). Source files remain ESM at runtime.
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      useESM: true,
+      useESM: false,
+      tsconfig: {
+        // Tests run under CJS interop; allow importing ESM-style sources.
+        module: 'CommonJS',
+        moduleResolution: 'node10',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        target: 'ES2022',
+      },
     }],
   },
+  extensionsToTreatAsEsm: [],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

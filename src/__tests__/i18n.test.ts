@@ -69,7 +69,7 @@ describe('I18nService', () => {
       const error = i18nService.createLocalizedError(
         'INVALID_PARAMS',
         'zh',
-        { field: 'requirements' }
+        { field: 'requirements' },
       );
       
       expect(error.code).toBe(-31002);
@@ -80,7 +80,7 @@ describe('I18nService', () => {
     test('应该回退到默认语言', () => {
       const error = i18nService.createLocalizedError(
         'INVALID_PARAMS',
-        'fr' as any
+        'fr' as any,
       );
       
       expect(error.message).toBe('Input parameter validation failed');

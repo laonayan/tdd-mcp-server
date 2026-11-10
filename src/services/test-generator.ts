@@ -89,7 +89,7 @@ export class TestGeneratorService {
 
   private async generateHappyPathTest(
     behavior: string,
-    params: TestGenerationParams
+    params: TestGenerationParams,
   ): Promise<GeneratedTest> {
     const testName = this.generateTestName(behavior, 'happy_path');
     const testCode = this.generateTestCode(testName, behavior, 'happy_path', params);
@@ -104,7 +104,7 @@ export class TestGeneratorService {
 
   private async generateEdgeCaseTests(
     behavior: string,
-    params: TestGenerationParams
+    params: TestGenerationParams,
   ): Promise<GeneratedTest[]> {
     const edgeCases = this.identifyEdgeCases(behavior);
     const tests: GeneratedTest[] = [];
@@ -126,7 +126,7 @@ export class TestGeneratorService {
 
   private async generateErrorCaseTests(
     behavior: string,
-    params: TestGenerationParams
+    params: TestGenerationParams,
   ): Promise<GeneratedTest[]> {
     const errorCases = this.identifyErrorCases(behavior);
     const tests: GeneratedTest[] = [];
@@ -149,7 +149,7 @@ export class TestGeneratorService {
   private generateTestName(
     behavior: string,
     testType: string,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     // Convert behavior to test method name
     let name = behavior
@@ -170,7 +170,7 @@ export class TestGeneratorService {
     behavior: string,
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     switch (params.language) {
       case SupportedLanguage.TYPESCRIPT:
@@ -192,7 +192,7 @@ export class TestGeneratorService {
     behavior: string,
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     const className = this.extractClassName(behavior);
     const methodName = this.extractMethodName(behavior);
@@ -221,7 +221,7 @@ export class TestGeneratorService {
     behavior: string,
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     const className = this.extractClassName(behavior);
     const methodName = this.extractMethodName(behavior);
@@ -248,7 +248,7 @@ export class TestGeneratorService {
     behavior: string,
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     const className = this.extractClassName(behavior);
     const methodName = this.extractMethodName(behavior);
@@ -274,7 +274,7 @@ public void ${testName}() {
     behavior: string,
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     const className = this.extractClassName(behavior);
     const methodName = this.extractMethodName(behavior);
@@ -299,7 +299,7 @@ public void ${testName}()
   private generateArrangeSection(
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     // Generate appropriate test data based on test type and case
     switch (testType) {
@@ -319,7 +319,7 @@ public void ${testName}()
     className: string,
     methodName: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     const objectName = className.toLowerCase();
     
@@ -344,7 +344,7 @@ public void ${testName}()
   private generateAssertSection(
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string
+    specificCase?: string,
   ): string {
     if (testType === 'error_case') {
       return '// Error case assertion handled in Act section';
@@ -370,7 +370,7 @@ public void ${testName}()
     const words = behavior.split(' ');
     const relevantWords = words.filter(word => 
       word.length > 2 && 
-      !['the', 'and', 'or', 'but', 'should', 'must', 'when', 'given'].includes(word.toLowerCase())
+      !['the', 'and', 'or', 'but', 'should', 'must', 'when', 'given'].includes(word.toLowerCase()),
     );
     
     if (relevantWords.length > 0) {
@@ -442,7 +442,7 @@ public void ${testName}()
       case SupportedLanguage.TYPESCRIPT:
       case SupportedLanguage.JAVASCRIPT:
         if (framework === 'jest') {
-          imports.push("import { describe, it, expect } from '@jest/globals';");
+          imports.push('import { describe, it, expect } from \'@jest/globals\';');
         }
         break;
       case SupportedLanguage.PYTHON:

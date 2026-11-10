@@ -166,10 +166,10 @@ export class TDDCycleValidatorService {
     } else {
       // Generic parsing
       const passedLines = output.split('\n').filter(line => 
-        line.includes('passed') || line.includes('OK') || line.includes('✓')
+        line.includes('passed') || line.includes('OK') || line.includes('✓'),
       ).length;
       const failedLines = output.split('\n').filter(line => 
-        line.includes('failed') || line.includes('FAIL') || line.includes('✗') || line.includes('ERROR')
+        line.includes('failed') || line.includes('FAIL') || line.includes('✗') || line.includes('ERROR'),
       ).length;
       
       passed = passedLines;
@@ -264,7 +264,7 @@ export class TDDCycleValidatorService {
     complexity += nestedIfMatches ? nestedIfMatches.length : 0;
     
     // Complex boolean expressions
-    const complexBooleanMatches = content.match(/if\s*\([^)]*(\&\&|\|\|)[^)]*(\&\&|\|\|)[^)]*\)/g);
+    const complexBooleanMatches = content.match(/if\s*\([^)]*(&&|||)[^)]*(&&|||)[^)]*\)/g);
     complexity += complexBooleanMatches ? complexBooleanMatches.length : 0;
     
     // Long parameter lists
@@ -316,7 +316,7 @@ export class TDDCycleValidatorService {
         continue;
       }
       
-      if (char === '"' || char === "'" || char === '`') {
+      if (char === '"' || char === '\'' || char === '`') {
         inString = true;
         stringChar = char;
         continue;

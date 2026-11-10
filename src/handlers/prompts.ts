@@ -523,5 +523,5 @@ function getDefaultTemplate(templateName: string): string {
 4. Document any assumptions or edge cases`,
   };
 
-  return defaultTemplates[templateName] || `# {{TEMPLATE_NAME}}\n\nTemplate content not found.`;
+  return defaultTemplates[templateName] || '# {{TEMPLATE_NAME}}\n\nTemplate content not found.';
 }

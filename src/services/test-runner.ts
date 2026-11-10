@@ -53,7 +53,7 @@ export class TestRunnerService {
         stdout,
         stderr,
         framework,
-        endTime - startTime
+        endTime - startTime,
       );
 
       return results;
@@ -167,7 +167,7 @@ export class TestRunnerService {
     stdout: string,
     stderr: string,
     framework: any,
-    duration: number
+    duration: number,
   ): Promise<TestResults> {
     try {
       // Try to parse JSON output first
@@ -436,20 +436,20 @@ export class TestRunnerService {
     stdout: string,
     stderr: string,
     framework: any,
-    duration: number
+    duration: number,
   ): TestResults {
     // Parse text output based on common patterns
     const lines = (stdout + '\n' + stderr).split('\n');
     
     // Simple pattern matching for test results
     const passedTests = lines.filter(line => 
-      line.includes('✓') || line.includes('PASSED') || line.includes('OK')
+      line.includes('✓') || line.includes('PASSED') || line.includes('OK'),
     );
     const failedTests = lines.filter(line => 
-      line.includes('✗') || line.includes('FAILED') || line.includes('ERROR')
+      line.includes('✗') || line.includes('FAILED') || line.includes('ERROR'),
     );
     const skippedTests = lines.filter(line => 
-      line.includes('SKIPPED') || line.includes('PENDING')
+      line.includes('SKIPPED') || line.includes('PENDING'),
     );
 
     const tests: TestResult[] = [

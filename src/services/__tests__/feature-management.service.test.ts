@@ -6,7 +6,7 @@ import {
   FeaturePriority, 
   CreateFeatureParams,
   UpdateFeatureStatusParams,
-  LinkFeatureFilesParams
+  LinkFeatureFilesParams,
 } from '../../types/storage.js';
 
 // Mock StorageService
@@ -32,13 +32,13 @@ describe('FeatureManagementService', () => {
         acceptanceCriteria: [
           'User can register with email and password',
           'User can login with valid credentials',
-          'User receives error message for invalid credentials'
+          'User receives error message for invalid credentials',
         ],
         priority: FeaturePriority.HIGH,
         projectId: 'project-123',
         tags: ['authentication', 'security'],
         estimatedHours: 20,
-        assignee: 'john.doe'
+        assignee: 'john.doe',
       };
 
       const expectedFeature: Partial<Feature> = {
@@ -50,7 +50,7 @@ describe('FeatureManagementService', () => {
         status: FeatureStatus.PLANNING,
         tags: params.tags,
         estimatedHours: params.estimatedHours,
-        assignee: params.assignee
+        assignee: params.assignee,
       };
 
       mockStorageService.saveFeature.mockResolvedValue(undefined);
@@ -67,7 +67,7 @@ describe('FeatureManagementService', () => {
       expect(result.status).toBe(FeatureStatus.PLANNING);
       expect(result.priority).toBe(expectedFeature.priority);
       expect(mockStorageService.saveFeature).toHaveBeenCalledWith(
-        expect.objectContaining(expectedFeature)
+        expect.objectContaining(expectedFeature),
       );
     });
 
@@ -76,7 +76,7 @@ describe('FeatureManagementService', () => {
       const params: CreateFeatureParams = {
         name: 'Simple Feature',
         description: 'A simple feature description',
-        acceptanceCriteria: ['Feature works correctly']
+        acceptanceCriteria: ['Feature works correctly'],
       };
 
       const currentProjectId = 'default-project';
@@ -101,7 +101,7 @@ describe('FeatureManagementService', () => {
       const params: CreateFeatureParams = {
         name: '',
         description: 'Description',
-        acceptanceCriteria: ['Criteria']
+        acceptanceCriteria: ['Criteria'],
       };
 
       // Act & Assert
@@ -114,7 +114,7 @@ describe('FeatureManagementService', () => {
       const params: CreateFeatureParams = {
         name: 'Feature Name',
         description: 'Description',
-        acceptanceCriteria: []
+        acceptanceCriteria: [],
       };
 
       // Act & Assert
@@ -133,7 +133,7 @@ describe('FeatureManagementService', () => {
       priority: FeaturePriority.MEDIUM,
       acceptanceCriteria: ['Test criteria'],
       createdAt: new Date('2024-01-01T10:00:00Z'),
-      updatedAt: new Date('2024-01-01T10:00:00Z')
+      updatedAt: new Date('2024-01-01T10:00:00Z'),
     };
 
     it('should update feature status successfully', async () => {
@@ -144,9 +144,9 @@ describe('FeatureManagementService', () => {
         progress: {
           testsWritten: 5,
           testsPass: 3,
-          implementationFiles: ['auth.service.ts']
+          implementationFiles: ['auth.service.ts'],
         },
-        notes: 'Started working on authentication logic'
+        notes: 'Started working on authentication logic',
       };
 
       mockStorageService.loadFeature.mockResolvedValue(mockFeature);
@@ -163,8 +163,8 @@ describe('FeatureManagementService', () => {
         expect.objectContaining({
           id: params.featureId,
           status: params.status,
-          progress: params.progress
-        })
+          progress: params.progress,
+        }),
       );
     });
 
@@ -172,7 +172,7 @@ describe('FeatureManagementService', () => {
       // Arrange
       const params: UpdateFeatureStatusParams = {
         featureId: 'non-existent-feature',
-        status: FeatureStatus.IN_PROGRESS
+        status: FeatureStatus.IN_PROGRESS,
       };
 
       mockStorageService.loadFeature.mockResolvedValue(null);
@@ -189,7 +189,7 @@ describe('FeatureManagementService', () => {
       const params: LinkFeatureFilesParams = {
         featureId: 'feature-123',
         filePaths: ['src/auth.service.ts', 'src/__tests__/auth.service.test.ts'],
-        fileType: 'implementation'
+        fileType: 'implementation',
       };
 
       mockStorageService.saveFileAssociation.mockResolvedValue(undefined);
@@ -211,7 +211,7 @@ describe('FeatureManagementService', () => {
       const params: LinkFeatureFilesParams = {
         featureId: 'feature-123',
         filePaths: [],
-        fileType: 'test'
+        fileType: 'test',
       };
 
       // Act & Assert
@@ -232,7 +232,7 @@ describe('FeatureManagementService', () => {
         acceptanceCriteria: ['User can login', 'User can register'],
         createdAt: new Date(),
         updatedAt: new Date(),
-        tags: ['authentication', 'security', 'user']
+        tags: ['authentication', 'security', 'user'],
       },
       {
         id: 'feature-2',
@@ -244,7 +244,7 @@ describe('FeatureManagementService', () => {
         acceptanceCriteria: ['User can request password reset'],
         createdAt: new Date(),
         updatedAt: new Date(),
-        tags: ['authentication', 'password', 'email']
+        tags: ['authentication', 'password', 'email'],
       },
       {
         id: 'feature-3',
@@ -256,8 +256,8 @@ describe('FeatureManagementService', () => {
         acceptanceCriteria: ['Show product list'],
         createdAt: new Date(),
         updatedAt: new Date(),
-        tags: ['catalog', 'products', 'display']
-      }
+        tags: ['catalog', 'products', 'display'],
+      },
     ];
 
     it('should find features similar by name and description', async () => {

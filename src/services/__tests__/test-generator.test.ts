@@ -14,7 +14,7 @@ describe('TestGeneratorService', () => {
         requirements: 'Calculator should add two numbers correctly',
         language: SupportedLanguage.TYPESCRIPT,
         framework: 'jest',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       const result = await testGenerator.generateTests(params);
@@ -32,7 +32,7 @@ describe('TestGeneratorService', () => {
         requirements: 'User should be able to login with valid credentials',
         language: SupportedLanguage.PYTHON,
         framework: 'pytest',
-        testType: TestType.INTEGRATION
+        testType: TestType.INTEGRATION,
       };
 
       const result = await testGenerator.generateTests(params);
@@ -48,7 +48,7 @@ describe('TestGeneratorService', () => {
         requirements: 'Shopping cart should calculate total price correctly',
         language: SupportedLanguage.JAVA,
         framework: 'junit5',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       const result = await testGenerator.generateTests(params);
@@ -63,7 +63,7 @@ describe('TestGeneratorService', () => {
         requirements: 'Test requirement',
         language: SupportedLanguage.TYPESCRIPT,
         framework: 'unsupported-framework',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       await expect(testGenerator.generateTests(params))
@@ -102,7 +102,7 @@ describe('TestGeneratorService', () => {
         requirements: behavior,
         language: SupportedLanguage.TYPESCRIPT,
         framework: 'jest',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       const testGeneratorAny = testGenerator as any;
@@ -113,7 +113,7 @@ describe('TestGeneratorService', () => {
       expect(test.code).toContain('describe(');
       expect(test.code).toContain('it(');
       expect(test.code).toContain('expect(');
-      expect(test.imports).toContain("import { describe, it, expect } from '@jest/globals';");
+      expect(test.imports).toContain('import { describe, it, expect } from \'@jest/globals\';');
     });
   });
 
@@ -124,7 +124,7 @@ describe('TestGeneratorService', () => {
         requirements: behavior,
         language: SupportedLanguage.TYPESCRIPT,
         framework: 'jest',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       const testGeneratorAny = testGenerator as any;
@@ -141,7 +141,7 @@ describe('TestGeneratorService', () => {
         requirements: behavior,
         language: SupportedLanguage.TYPESCRIPT,
         framework: 'jest',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       const testGeneratorAny = testGenerator as any;
@@ -159,7 +159,7 @@ describe('TestGeneratorService', () => {
         requirements: behavior,
         language: SupportedLanguage.TYPESCRIPT,
         framework: 'jest',
-        testType: TestType.UNIT
+        testType: TestType.UNIT,
       };
 
       const testGeneratorAny = testGenerator as any;
@@ -261,7 +261,7 @@ describe('TestGeneratorService', () => {
       const tests = [
         { name: 'test1', description: 'happy path test', code: '', imports: [] },
         { name: 'test2', description: 'edge case test', code: '', imports: [] },
-        { name: 'test3', description: 'error case test', code: '', imports: [] }
+        { name: 'test3', description: 'error case test', code: '', imports: [] },
       ];
 
       const testGeneratorAny = testGenerator as any;
@@ -276,7 +276,7 @@ describe('TestGeneratorService', () => {
         name: `test${i}`,
         description: i < 3 ? 'happy path test' : i < 6 ? 'edge case test' : 'error case test',
         code: '',
-        imports: []
+        imports: [],
       }));
 
       const testGeneratorAny = testGenerator as any;
