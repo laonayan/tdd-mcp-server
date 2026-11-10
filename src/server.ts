@@ -19,7 +19,7 @@ import { I18nService } from './i18n.js';
 // Server information
 const SERVER_INFO = {
   name: 'tdd-mcp-server',
-  version: '1.0.0',
+  version: '2.1.0',
   description: 'Test Driven Development MCP Server',
   author: 'TDD MCP Team',
   license: 'MIT',

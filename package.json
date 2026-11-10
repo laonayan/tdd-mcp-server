@@ -1,6 +1,6 @@
 {
   "name": "tdd-mcp-server",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "Test Driven Development MCP Server - Provides TDD workflow support for AI tools",
   "main": "dist/server.js",
   "directories": {
