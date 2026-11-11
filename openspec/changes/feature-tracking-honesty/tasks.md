@@ -26,7 +26,7 @@
 
 ## T5: 集成断言与收尾
 
-- [ ] 5.1 `integration-test.sh` 测试 7/8：入参补 `acceptanceCriteria`/`methodId` 等，断言改为真实证据短语（`"id"`、`"featureId"`、`"status"`）
-- [ ] 5.2 全量质量门：jest（带内存上限）、ESLint 0 error、tsc 零错误、integration 9/9、`openspec validate --all`
-- [ ] 5.3 CHANGELOG 增补（Unreleased/Fixed 或 Changed：v2 feature/tracking 诚实化 + 两处修正，标注 `feature create` 缺验收条件行为变化）
-- [ ] 5.4 提交并勾选本文件全部任务
+- [x] 5.1 `integration-test.sh` 测试 7/8：入参补 `acceptanceCriteria`/`methodId` 等，断言改为真实证据短语（`"id"`、`"featureId"`、`"status"`）
+- [x] 5.2 全量质量门：jest（带内存上限）、ESLint 0 error、tsc 零错误、integration 9/9、`openspec validate --all`
+- [x] 5.3 CHANGELOG 增补（Unreleased/Fixed 或 Changed：v2 feature/tracking 诚实化 + 两处修正，标注 `feature create` 缺验收条件行为变化）
+- [x] 5.4 提交并勾选本文件全部任务

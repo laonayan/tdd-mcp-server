@@ -12,6 +12,40 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+### Changed
+
+- v2 `feature` / `tracking` 工具诚实化接线：四个 feature 子命令
+  （create/update/link/find）与三个 tracking 子命令（register/result/status）
+  现真实调用 `FeatureManagementService` / `StorageService` 并返回持久化产物
+  （含 `id`、`status` 等真实字段），错误如实以 `isError` 传播；输入 schema
+  补齐可选字段（`acceptanceCriteria`、`priority`、`tags`、`projectId`、
+  `status`、`progress`、`filePaths`、`fileType`、`maxResults`、`methodId`、
+  `result`、`testType`），既有字段不变
+  *EN: v2 `feature` / `tracking` tools are now honestly wired: all four feature
+  subcommands and three tracking subcommands call the real
+  `FeatureManagementService` / `StorageService` and return persisted artifacts
+  (with real fields like `id` and `status`), errors propagate honestly as
+  `isError`; input schemas gained optional fields while existing ones are
+  unchanged.*
+- **行为变化**：`feature` 的 `create` 缺少 `acceptanceCriteria` 时从"固定
+  成功文案"变为如实返回 service 校验错误（至少一条验收条件）
+  *EN: **Behavior change**: `feature` `create` without `acceptanceCriteria` now
+  returns the service's honest validation error instead of a fixed success
+  string.*
+- 测试结果文件（`test-results.json` 等）改为相对被测项目路径（`projectPath`）
+  解析，不再误读 MCP 服务器进程 cwd 下的陈旧同名文件；找不到时维持回退
+  stdout 文本解析的既有语义
+  *EN: Test result files are now resolved against the tested project's
+  `projectPath` instead of the MCP server process cwd (which could pick up a
+  stale file); the existing fallback to stdout text parsing is preserved.*
+- `StorageService.loadTestMethod` 改为逐项目直读 `test-methods.jsonl` 并早退，
+  不再调用 `listTestMethods('')` 聚合全部项目的全部方法（原循环变量
+  projectId 从未生效）
+  *EN: `StorageService.loadTestMethod` now reads each project's
+  `test-methods.jsonl` directly with early exit, instead of aggregating every
+  method of every project via `listTestMethods('')` (whose loop variable was
+  never effective).*
+
 ### Fixed
 
 - 修复可导致整机假死的递归测试执行漏洞：`validate`（TDD 循环校验）内部的
