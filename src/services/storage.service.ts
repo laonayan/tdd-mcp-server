@@ -238,16 +238,19 @@ export class StorageService implements IStorageService {
   }
 
   async loadTestMethod(id: string): Promise<TestMethod | null> {
+    // 逐项目直读其 test-methods.jsonl 并早退：命中即返回，
+    // 不再把全部项目的全部方法聚合后查找（旧实现调用 listTestMethods('')
+    // 的全量扫描，且循环变量 projectId 从未生效）。
     const projects = await this.listProjects();
-    
+
     for (const projectId of projects) {
-      const methods = await this.listTestMethods(''); // We need to search all features
+      const methods = await this.readJsonlFile<TestMethod>(this.getTestMethodsPath(projectId));
       const method = methods.find(m => m.id === id);
       if (method) {
         return method;
       }
     }
-    
+
     return null;
   }
 

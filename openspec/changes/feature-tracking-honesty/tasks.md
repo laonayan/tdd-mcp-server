@@ -20,9 +20,9 @@
 
 ## T4: loadTestMethod 按项目文件直读
 
-- [ ] 4.1 RED：`src/services/__tests__/storage.service.basic.test.ts` 新增用例——loadTestMethod 命中返回完整记录、未命中返回 null、更新后回读一致
-- [ ] 4.2 GREEN：消除 `listTestMethods('')` 全量扫描，改为逐项目 `readJsonlFile` 后 find
-- [ ] 4.3 提交
+- [x] 4.1 RED：`src/services/__tests__/storage.service.basic.test.ts` 新增用例——loadTestMethod 命中返回完整记录、未命中返回 null、更新后回读一致
+- [x] 4.2 GREEN：消除 `listTestMethods('')` 全量扫描，改为逐项目 `readJsonlFile` 后 find
+- [x] 4.3 提交
 
 ## T5: 集成断言与收尾
 
