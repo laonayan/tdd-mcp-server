@@ -30,3 +30,5 @@
 - [x] 5.2 全量质量门：jest（带内存上限）、ESLint 0 error、tsc 零错误、integration 9/9、`openspec validate --all`
 - [x] 5.3 CHANGELOG 增补（Unreleased/Fixed 或 Changed：v2 feature/tracking 诚实化 + 两处修正，标注 `feature create` 缺验收条件行为变化）
 - [x] 5.4 提交并勾选本文件全部任务
+
+> 归档备注（2026-11-11）：16/16 任务完成（T0 提案 09a11f1，T1+T2 接线 9f27c1b，T3 结果路径 6f1d174，T4 存储早退 b1c9df5，T5 集成断言与文档 f8f50fc）。质量门：jest 168、ESLint 0 error、tsc 零错误、集成 9/9、openspec validate 全绿（均带内存上限运行）。
