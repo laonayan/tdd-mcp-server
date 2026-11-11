@@ -19,7 +19,7 @@ openspec validate --all                # 机器校验 specs 与 changes（质量
 ## 质量门（每次提交前全部通过）
 
 ```bash
-npm test                    # 单元测试（当前 143 个）
+npm test                    # 单元测试（当前 168 个）
 npm run lint                # ESLint 9（0 error；存量 warning 为已记录技术债）
 npm run build               # tsc，零错误
 ./integration-test.sh       # 9 个 stdio 集成场景（需本机 npm 与 node）
@@ -27,6 +27,19 @@ openspec validate --all     # 规格校验
 ```
 
 CI（GitHub Actions）在 Node 20/24 上执行 build + test + lint。
+
+## 运行安全：内存限制（强制）
+
+**任何需要运行的操作，必须在启动时设置内存限制**——禁止无上限占用内存导致整台设备假死。本仓库曾因递归 spawn 测试进程发生过整机冻结事故（每层按 worker 数派生进程，进程树指数膨胀），见 `src/services/execution-guard.ts` 背景注释与 `src/services/__tests__/nested-execution-guard.test.ts` 回归用例。
+
+- `npm test` 已默认限内存（`node --max-old-space-size=2048 ... --maxWorkers=2 --workerIdleMemoryLimit=512MB`），直接使用即可
+- 直接调用 node 工具链时必须显式带上限，例如：
+  - `node --max-old-space-size=2048 node_modules/jest/bin/jest.js --maxWorkers=2 --workerIdleMemoryLimit=512MB`
+  - `node --max-old-space-size=1536 node_modules/typescript/bin/tsc`
+  - `node --max-old-space-size=1536 node_modules/eslint/bin/eslint.js src`
+- 运行 `integration-test.sh` 或任何会派生子进程的脚本前，先 `export NODE_OPTIONS="--max-old-space-size=1536"`，让整棵子进程树的每个 node 进程都被封顶；宁可单进程 OOM 快速失败，也不拖垮整机
+- 服务代码派生测试/覆盖率子进程必须统一走 `src/services/execution-guard.ts`：注入 `TDD_MCP_NESTED_RUN` 嵌套标记 + `NODE_OPTIONS=--max-old-space-size=<MB>`（默认 1024，可用 `TDD_MCP_CHILD_MEMORY_LIMIT_MB` 覆盖），并在 spawn 前用 `isNestedExecution()` 拒绝嵌套执行——**新增任何 spawn 点都必须接入该守卫**
+- 后台运行测试/构建时同样适用上述规则；用管道接 `tail` 会掩盖真实退出码，判断成败以 `$?` 或 `PIPESTATUS` 为准
 
 ## 架构速览
 
