@@ -182,10 +182,14 @@ tdd({
 
 ### 2. 功能生命周期管理
 ```javascript
-// 创建功能
+// 创建功能（acceptanceCriteria 必填，至少一条；返回含 id/status 的持久化对象）
 const feature = feature({
   name: "商品推荐系统",
-  description: "基于用户行为的个性化商品推荐"
+  description: "基于用户行为的个性化商品推荐",
+  acceptanceCriteria: [
+    "根据浏览历史生成推荐",
+    "推荐结果可排除已购商品"
+  ]
 })
 
 // 更新功能状态
