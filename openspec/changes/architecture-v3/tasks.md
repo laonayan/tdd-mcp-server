@@ -16,9 +16,9 @@
 
 ## T3: 仓储接口与测试去污染
 
-- [ ] 3.1 ports 增加存储仓储接口；`StorageService` implements（JSONL 逻辑不动）
-- [ ] 3.2 `InMemoryStorage` fake 实现；new-tools handler 单测改注入 fake（零 `~/.tdd-flow` 写入验证）
-- [ ] 3.3 全量门绿，提交
+- [x] 3.1 ports 增加存储仓储接口；`StorageService` implements（JSONL 逻辑不动）
+- [x] 3.2 `InMemoryStorage` fake 实现；new-tools handler 单测改注入 fake（零 `~/.tdd-flow` 写入验证）
+- [x] 3.3 全量门绿，提交
 
 ## T4: 组合根与命令注册表
 

@@ -15,8 +15,10 @@ import {
   TestMethodSchema,
   FileAssociationSchema,
 } from '../types/storage.js';
+// V3：仓储端口（StorageService 即 JSONL 适配器）
+import type { StorageRepository } from '../core/ports.js';
 
-export class StorageService implements IStorageService {
+export class StorageService implements IStorageService, StorageRepository {
   private readonly baseStoragePath: string;
 
   constructor() {

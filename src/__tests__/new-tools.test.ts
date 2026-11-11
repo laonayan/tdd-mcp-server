@@ -1,7 +1,8 @@
 import { NewToolsHandler } from '../handlers/new-tools.js';
 import { I18nService } from '../i18n.js';
 import { FeatureManagementService } from '../services/feature-management.service.js';
-import { StorageService } from '../services/storage.service.js';
+import { InMemoryStorage } from '../adapters/in-memory-storage.js';
+import type { StorageService } from '../services/storage.service.js';
 import { Feature, TestMethod } from '../types/storage.js';
 
 describe('NewToolsHandler', () => {
@@ -10,7 +11,10 @@ describe('NewToolsHandler', () => {
 
   beforeEach(() => {
     i18nService = new I18nService();
-    toolsHandler = new NewToolsHandler(i18nService);
+    // V3：注入内存仓储 fake——单测不再写用户主目录
+    toolsHandler = new NewToolsHandler(i18nService, {
+      storageService: new InMemoryStorage() as unknown as StorageService,
+    });
   });
 
   describe('工具列表测试', () => {
