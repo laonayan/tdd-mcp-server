@@ -2,15 +2,15 @@
 
 ## T1: v2 feature 工具真实接线
 
-- [ ] 1.1 RED：`src/__tests__/new-tools.test.ts` 新增 feature create/update/link/find 用例——断言返回含 `id`/`status` 等真实字段、缺 `acceptanceCriteria` 时 `isError: true`（先跑失败）
-- [ ] 1.2 GREEN：`handleFeatureTool` 接线 `FeatureManagementService`（create→createFeature、update→updateFeatureStatus、link→linkFeatureFiles、find→findSimilarFeatures），schema 补可选字段
-- [ ] 1.3 提交（`T1(v2-feature): ... Change: feature-tracking-honesty`）
+- [x] 1.1 RED：`src/__tests__/new-tools.test.ts` 新增 feature create/update/link/find 用例——断言返回含 `id`/`status` 等真实字段、缺 `acceptanceCriteria` 时 `isError: true`（先跑失败）
+- [x] 1.2 GREEN：`handleFeatureTool` 接线 `FeatureManagementService`（create→createFeature、update→updateFeatureStatus、link→linkFeatureFiles、find→findSimilarFeatures），schema 补可选字段
+- [x] 1.3 提交（`T1(v2-feature): ... Change: feature-tracking-honesty`）
 
 ## T2: v2 tracking 工具真实接线
 
-- [ ] 2.1 RED：新增 tracking register/result/status 用例——断言持久化对象回读一致、methodId 不存在时 `isError: true`
-- [ ] 2.2 GREEN：`handleTrackingTool` 接线 `StorageService`（register 构造 TestMethod 落盘、result/status 更新后回读），schema 补 methodId/result/status 字段
-- [ ] 2.3 提交
+- [x] 2.1 RED：新增 tracking register/result/status 用例——断言持久化对象回读一致、methodId 不存在时 `isError: true`
+- [x] 2.2 GREEN：`handleTrackingTool` 接线 `StorageService`（register 构造 TestMethod 落盘、result/status 更新后回读），schema 补 methodId/result/status 字段
+- [x] 2.3 提交
 
 ## T3: 测试结果文件按 projectPath 解析
 

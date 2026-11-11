@@ -14,7 +14,13 @@ import { RefactoringService } from '../services/refactoring.js';
 import { TDDCycleValidatorService } from '../services/tdd-cycle-validator.js';
 import { FeatureManagementService } from '../services/feature-management.service.js';
 import { StorageService } from '../services/storage.service.js';
-import { TDDStage } from '../types/storage.js';
+import { TDDStage, TestMethod } from '../types/storage.js';
+
+/** 可注入依赖（测试用；缺省时与既有行为完全一致） */
+export interface NewToolsHandlerDeps {
+  featureManagementService?: FeatureManagementService;
+  storageService?: StorageService;
+}
 
 export class NewToolsHandler {
   private testGenerator: TestGeneratorService;
@@ -26,15 +32,19 @@ export class NewToolsHandler {
   private storageService: StorageService;
   private featureManagementService: FeatureManagementService;
 
-  constructor(private i18nService: I18nService) {
+  constructor(
+    private i18nService: I18nService,
+    deps?: NewToolsHandlerDeps,
+  ) {
     this.testGenerator = new TestGeneratorService();
     this.codeGenerator = new CodeGeneratorService();
     this.testRunner = new TestRunnerService();
     this.coverageAnalyzer = new CoverageAnalyzerService();
     this.refactoring = new RefactoringService();
     this.tddCycleValidator = new TDDCycleValidatorService();
-    this.storageService = new StorageService();
-    this.featureManagementService = new FeatureManagementService(this.storageService);
+    this.storageService = deps?.storageService ?? new StorageService();
+    this.featureManagementService =
+      deps?.featureManagementService ?? new FeatureManagementService(this.storageService);
   }
 
   async listTools(request: ListToolsRequest): Promise<ListToolsResult> {
@@ -129,13 +139,59 @@ export class NewToolsHandler {
             type: 'string',
             description: locale === 'zh' ? '功能描述' : 'Feature description',
           },
+          acceptanceCriteria: {
+            type: 'array',
+            items: { type: 'string' },
+            description: locale === 'zh'
+              ? '验收条件（create 必填，至少一条）'
+              : 'Acceptance criteria (required for create, at least one)',
+          },
+          priority: {
+            type: 'string',
+            enum: ['low', 'medium', 'high', 'critical'],
+            description: locale === 'zh' ? '优先级' : 'Priority',
+          },
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+            description: locale === 'zh' ? '标签' : 'Tags',
+          },
+          projectId: {
+            type: 'string',
+            description: locale === 'zh' ? '项目ID（缺省用当前项目）' : 'Project ID (defaults to current project)',
+          },
+          featureId: {
+            type: 'string',
+            description: locale === 'zh' ? '功能ID（update/link 用）' : 'Feature ID (for update/link)',
+          },
+          status: {
+            type: 'string',
+            enum: ['planning', 'in_progress', 'completed', 'on_hold', 'cancelled'],
+            description: locale === 'zh' ? '目标状态（update 用）' : 'Target status (for update)',
+          },
+          progress: {
+            type: 'object',
+            description: locale === 'zh'
+              ? '进度信息（update 可选：testsWritten/testsPass/implementationFiles/coveragePercentage）'
+              : 'Progress info (optional for update: testsWritten/testsPass/implementationFiles/coveragePercentage)',
+          },
+          filePaths: {
+            type: 'array',
+            items: { type: 'string' },
+            description: locale === 'zh' ? '关联文件路径（link 用）' : 'File paths to link',
+          },
+          fileType: {
+            type: 'string',
+            enum: ['test', 'implementation', 'config', 'documentation'],
+            description: locale === 'zh' ? '文件类型（link 用）' : 'File type (for link)',
+          },
           query: {
             type: 'string',
             description: locale === 'zh' ? '搜索查询' : 'Search query',
           },
-          featureId: {
-            type: 'string',
-            description: locale === 'zh' ? '功能ID' : 'Feature ID',
+          maxResults: {
+            type: 'number',
+            description: locale === 'zh' ? '最大返回数（find 用）' : 'Max results (for find)',
           },
         },
         required: ['name'],
@@ -172,6 +228,30 @@ export class NewToolsHandler {
           framework: {
             type: 'string',
             description: locale === 'zh' ? '测试框架' : 'Testing framework',
+          },
+          testType: {
+            type: 'string',
+            enum: ['unit', 'integration', 'e2e', 'performance'],
+            description: locale === 'zh' ? '测试类型（register 可选）' : 'Test type (optional for register)',
+          },
+          projectId: {
+            type: 'string',
+            description: locale === 'zh' ? '项目ID（缺省用当前项目）' : 'Project ID (defaults to current project)',
+          },
+          methodId: {
+            type: 'string',
+            description: locale === 'zh' ? '测试方法ID（result/status 用）' : 'Test method ID (for result/status)',
+          },
+          result: {
+            type: 'object',
+            description: locale === 'zh'
+              ? '执行结果（result 用）：{ passed: boolean, duration?: number, output?: string, error?: string, coverage?: number }'
+              : 'Execution result (for result): { passed: boolean, duration?: number, output?: string, error?: string, coverage?: number }',
+          },
+          status: {
+            type: 'string',
+            enum: ['passed', 'failed', 'skipped', 'pending'],
+            description: locale === 'zh' ? '目标状态（status 用）' : 'Target status (for status)',
           },
         },
       },
@@ -425,22 +505,93 @@ export class NewToolsHandler {
   }
 
   private async handleFeatureTool(args: any): Promise<CallToolResult> {
-    if (!args.name && !args.query) {
+    // create/find 走 name/query；update/link 走 featureId——三者皆缺才是参数缺失
+    if (!args.name && !args.query && !args.featureId) {
       const error = this.i18nService.createLocalizedError('INVALID_PARAMS');
       return this.createErrorResult(error.message);
     }
 
     const command = args.command || 'create';
 
+    // 真实接线：每个子命令调用 FeatureManagementService 并返回真实产物
+    // （Evidence over Claims——禁止与输入无关的固定成功文案）
     switch (command) {
-      case 'create':
-        return this.createSuccessResult('Feature created successfully');
-      case 'update':
-        return this.createSuccessResult('Feature updated successfully');
-      case 'link':
-        return this.createSuccessResult('Files linked to feature successfully');
-      case 'find':
-        return this.createSuccessResult('Similar features found');
+      case 'create': {
+        try {
+          const feature = await this.featureManagementService.createFeature({
+            name: args.name,
+            description: args.description ?? '',
+            acceptanceCriteria: args.acceptanceCriteria,
+            priority: args.priority,
+            projectId: args.projectId,
+            tags: args.tags,
+            estimatedHours: args.estimatedHours,
+            assignee: args.assignee,
+          });
+          return this.createSuccessResult(
+            'Feature created successfully:\n' + JSON.stringify(feature, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
+      case 'update': {
+        if (!args.featureId || !args.status) {
+          return this.createErrorResult('featureId and status are required for update command');
+        }
+        try {
+          const updated = await this.featureManagementService.updateFeatureStatus({
+            featureId: args.featureId,
+            status: args.status,
+            progress: args.progress,
+          });
+          return this.createSuccessResult(
+            'Feature updated successfully:\n' + JSON.stringify(updated, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
+      case 'link': {
+        if (!args.featureId || !args.filePaths || args.filePaths.length === 0) {
+          return this.createErrorResult('featureId and filePaths are required for link command');
+        }
+        try {
+          const associations = await this.featureManagementService.linkFeatureFiles({
+            featureId: args.featureId,
+            filePaths: args.filePaths,
+            fileType: args.fileType,
+          });
+          return this.createSuccessResult(
+            'Files linked to feature successfully:\n' + JSON.stringify(associations, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
+      case 'find': {
+        if (!args.query) {
+          return this.createErrorResult('query is required for find command');
+        }
+        try {
+          const projectId = args.projectId
+            || this.featureManagementService.getCurrentProject()
+            || 'default-project';
+          const similar = await this.featureManagementService.findSimilarFeatures(
+            args.query,
+            projectId,
+            args.maxResults,
+          );
+          if (similar.length === 0) {
+            return this.createSuccessResult('No similar features found: []');
+          }
+          return this.createSuccessResult(
+            `Similar features found (${similar.length}):\n` + JSON.stringify(similar, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
       default:
         return this.createErrorResult(`Invalid command: ${command}`);
     }
@@ -449,16 +600,82 @@ export class NewToolsHandler {
   private async handleTrackingTool(args: any): Promise<CallToolResult> {
     const command = args.command || 'register';
 
+    // 真实接线：调用 StorageService 持久化并返回/回读真实对象
     switch (command) {
-      case 'register':
+      case 'register': {
         if (!args.featureId || !args.name || !args.filePath || !args.framework) {
           return this.createErrorResult('featureId, name, filePath, and framework are required');
         }
-        return this.createSuccessResult('Test method registered successfully');
-      case 'result':
-        return this.createSuccessResult('Test execution result updated');
-      case 'status':
-        return this.createSuccessResult('Test method status updated');
+        const methodId = `test-${Date.now()}`;
+        const projectId = args.projectId
+          || this.featureManagementService.getCurrentProject()
+          || 'default-project';
+
+        const testMethod: TestMethod = {
+          id: methodId,
+          featureId: args.featureId,
+          projectId,
+          name: args.name,
+          filePath: args.filePath,
+          status: 'pending',
+          framework: args.framework,
+          createdAt: new Date(),
+          testType: args.testType,
+        };
+
+        try {
+          await this.storageService.registerTestMethod(testMethod);
+          return this.createSuccessResult(
+            'Test method registered successfully:\n' + JSON.stringify(testMethod, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
+      case 'result': {
+        if (!args.methodId || !args.result || typeof args.result.passed !== 'boolean') {
+          return this.createErrorResult(
+            'methodId and result (with boolean passed) are required for result command',
+          );
+        }
+        try {
+          const ok = await this.storageService.updateTestExecutionResult(args.methodId, {
+            duration: args.result.duration ?? 0,
+            passed: args.result.passed,
+            output: args.result.output,
+            error: args.result.error,
+            coverage: args.result.coverage,
+          });
+          if (!ok) {
+            return this.createErrorResult(
+              `Failed to update test execution result: ${args.methodId}`,
+            );
+          }
+          const updated = await this.storageService.loadTestMethod(args.methodId);
+          return this.createSuccessResult(
+            'Test execution result updated:\n' + JSON.stringify(updated, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
+      case 'status': {
+        if (!args.methodId || !args.status) {
+          return this.createErrorResult('methodId and status are required for status command');
+        }
+        try {
+          const ok = await this.storageService.updateTestMethodStatus(args.methodId, args.status);
+          if (!ok) {
+            return this.createErrorResult(`Failed to update test method status: ${args.methodId}`);
+          }
+          const updated = await this.storageService.loadTestMethod(args.methodId);
+          return this.createSuccessResult(
+            'Test method status updated:\n' + JSON.stringify(updated, null, 2),
+          );
+        } catch (error) {
+          return this.createErrorResult(error instanceof Error ? error.message : String(error));
+        }
+      }
       default:
         return this.createErrorResult(`Invalid command: ${command}`);
     }
