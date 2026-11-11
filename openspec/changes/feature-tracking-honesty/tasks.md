@@ -14,9 +14,9 @@
 
 ## T3: 测试结果文件按 projectPath 解析
 
-- [ ] 3.1 RED：`src/services/__tests__/test-runner.test.ts` 新增用例——`parseJsonResults` 从 projectPath 读取结果文件，且不读 cwd 下同名陈旧文件
-- [ ] 3.2 GREEN：`parseTestResults`/`parseJsonResults` 签名增加 projectPath，读取改为绝对路径；找不到回退文本解析
-- [ ] 3.3 提交
+- [x] 3.1 RED：`src/services/__tests__/test-runner.test.ts` 新增用例——`parseJsonResults` 从 projectPath 读取结果文件，且不读 cwd 下同名陈旧文件
+- [x] 3.2 GREEN：`parseTestResults`/`parseJsonResults` 签名增加 projectPath，读取改为绝对路径；找不到回退文本解析
+- [x] 3.3 提交
 
 ## T4: loadTestMethod 按项目文件直读
 

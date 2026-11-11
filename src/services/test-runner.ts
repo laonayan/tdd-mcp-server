@@ -65,6 +65,7 @@ export class TestRunnerService {
         stderr,
         framework,
         endTime - startTime,
+        projectPath,
       );
 
       return results;
@@ -204,10 +205,11 @@ export class TestRunnerService {
     stderr: string,
     framework: any,
     duration: number,
+    projectPath: string,
   ): Promise<TestResults> {
     try {
       // Try to parse JSON output first
-      const jsonResults = await this.parseJsonResults(framework.key);
+      const jsonResults = await this.parseJsonResults(framework.key, projectPath);
       if (jsonResults) {
         return jsonResults;
       }
@@ -219,17 +221,22 @@ export class TestRunnerService {
     return this.parseTextResults(stdout, stderr, framework, duration);
   }
 
-  private async parseJsonResults(frameworkKey: string): Promise<TestResults | null> {
+  private async parseJsonResults(
+    frameworkKey: string,
+    projectPath: string,
+  ): Promise<TestResults | null> {
     const jsonFiles = [
       'test-results.json',
       'test-results.xml', // For XML-based results
       'coverage/coverage-final.json',
     ];
 
+    // 结果文件由被测项目的测试命令写入 projectPath，必须按项目路径读取；
+    // 相对路径会落到服务器进程 cwd，读到陈旧/无关文件（诚实性缺陷）
     for (const fileName of jsonFiles) {
       try {
-        const content = await fs.readFile(fileName, 'utf8');
-        
+        const content = await fs.readFile(path.join(projectPath, fileName), 'utf8');
+
         if (fileName.endsWith('.json')) {
           const data = JSON.parse(content);
           return this.convertJsonToTestResults(data, frameworkKey);

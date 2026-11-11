@@ -350,4 +350,63 @@ describe('TestRunnerService', () => {
       expect(result.suites[0].tests[0].error).toContain('Command failed');
     });
   });
+
+  describe('parseJsonResults 按项目路径解析（诚实性回归）', () => {
+    const jestResultJson = (suiteName: string, testName: string) => JSON.stringify({
+      testResults: [
+        {
+          name: `${suiteName}.test.js`,
+          startTime: 1000,
+          endTime: 2000,
+          assertionResults: [
+            { title: testName, status: 'passed', duration: 5 },
+          ],
+        },
+      ],
+    });
+
+    afterEach(() => {
+      mockFs.promises.readFile.mockReset();
+    });
+
+    it('必须从 projectPath 读取结果文件，而非服务器 cwd', async () => {
+      const projectResultFile = '/valid/project/test-results.json';
+      // 按路径分发：只有 projectPath 下的绝对路径能读到真实结果；
+      // 相对路径（旧实现按服务器 cwd 解析）只能拿到陈旧文件
+      mockFs.promises.readFile = jest.fn().mockImplementation(async (p: unknown) => {
+        if (p === projectResultFile) {
+          return jestResultJson('SuiteFromProject', 'should pass');
+        }
+        if (p === 'test-results.json') {
+          return jestResultJson('STALE-SHOULD-NOT-APPEAR', 'stale test');
+        }
+        throw new Error('ENOENT');
+      }) as any;
+
+      const runnerAny = testRunner as any;
+      const result = await runnerAny.parseJsonResults('jest', '/valid/project');
+
+      expect(result).not.toBeNull();
+      expect(result.suites).toHaveLength(1);
+      expect(result.suites[0].name).toContain('SuiteFromProject');
+      expect(result.overall.passed).toBe(1);
+      expect(JSON.stringify(result)).not.toContain('STALE-SHOULD-NOT-APPEAR');
+    });
+
+    it('projectPath 下无结果文件时返回 null（回退文本解析），不读 cwd 陈旧文件', async () => {
+      // 只有 cwd 的陈旧文件可读；projectPath 下任何文件都 ENOENT
+      mockFs.promises.readFile = jest.fn().mockImplementation(async (p: unknown) => {
+        if (p === 'test-results.json') {
+          return jestResultJson('STALE-SHOULD-NOT-APPEAR', 'stale test');
+        }
+        throw new Error('ENOENT');
+      }) as any;
+
+      const runnerAny = testRunner as any;
+      const result = await runnerAny.parseJsonResults('jest', '/valid/project');
+
+      // projectPath 无文件 → null（由调用方回退文本解析），绝不误读 cwd 的陈旧文件
+      expect(result).toBeNull();
+    });
+  });
 });
