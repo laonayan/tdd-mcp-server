@@ -29,6 +29,8 @@
 
 ## T5: 收尾
 
-- [ ] 5.1 CHANGELOG + README 架构段更新
-- [ ] 5.2 全量质量门（带内存上限）+ openspec validate
-- [ ] 5.3 勾选全部任务，提交并推送，归档变更
+- [x] 5.1 CHANGELOG + README 架构段更新
+- [x] 5.2 全量质量门（带内存上限）+ openspec validate
+- [x] 5.3 勾选全部任务，提交并推送，归档变更
+
+> 归档备注（2026-11-11）：17/17 任务完成（T0 提案 a3c708f、T1 纯核心层 a643cf6、T2 执行网关 032eeed、T3 仓储+fake 473e843、T4 注册表+组合根 a230068、T5 收尾本提交）。质量门：jest 191、ESLint 0 error、tsc 零错误、集成 9/9（真实退出码 0）、openspec validate 全绿（均带内存上限运行）。

@@ -14,6 +14,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ### Changed
 
+- **V3 分层架构重构**（内部重排，外部行为零变化）：解析/相似度/分析逻辑
+  下沉纯核心层 `src/core/`（零 IO、零 mock 测试）；全部子进程执行收敛到
+  唯一受守卫网关 `GuardedCommandExecutor`（嵌套拒绝 + 内存上限 + 输出/
+  超时上限，架构测试锁定 `child_process` 白名单）；`StorageService` 实现
+  仓储端口并新增 `InMemoryStorage` fake（单测不再写 `~/.tdd-flow`）；
+  v2 三工具改为命令注册表 `src/commands/registry.ts` 单一事实来源
+  （zod 宽松校验 + handler），组合根统一装配（server.ts 只做协议绑定）
+  *EN: **V3 layered architecture refactor** (internal restructure, zero
+  external behavior change): parsing/similarity/analysis logic moved to the
+  pure core `src/core/` (zero IO, mock-free tests); all subprocess execution
+  converged into the single guarded gateway `GuardedCommandExecutor` (nested
+  refusal + memory caps + output/timeout limits, enforced by an architecture
+  test whitelisting `child_process`); `StorageService` implements the storage
+  repository port with a new `InMemoryStorage` fake (unit tests no longer
+  write to `~/.tdd-flow`); v2 tools now project from the command registry
+  `src/commands/registry.ts` as the single source of truth (loose zod
+  validation + handlers), assembled by a composition root.*
+
 - v2 `feature` / `tracking` 工具诚实化接线：四个 feature 子命令
   （create/update/link/find）与三个 tracking 子命令（register/result/status）
   现真实调用 `FeatureManagementService` / `StorageService` 并返回持久化产物

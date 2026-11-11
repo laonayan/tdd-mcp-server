@@ -3,9 +3,10 @@
 为 AI 编程助手提供测试驱动开发（TDD）工作流支持的 MCP 服务器：测试生成、实现生成、测试执行、覆盖率分析、重构建议、TDD 循环校验，以及功能管理与测试跟踪。
 
 - TypeScript + ESM，MCP SDK 1.x，stdio 传输，Node ≥ 20
+- V3 分层架构：`core`（纯函数）← `services`（编排）← `handlers`（注册表投影），组合根统一装配
+- 子进程执行收敛唯一受守卫网关（嵌套拒绝 + 内存上限），架构测试锁定
 - 双工具系统：v2 三工具 + 子命令（推荐）／ v1 十五工具（向后兼容）
-- 中英文界面，默认中文
-- 工具真实调用核心 service 并返回真实结果（Evidence over Claims）
+- 中英文界面，默认中文；工具真实调用核心 service 并返回真实结果
 
 ## 核心工具（v2，共 3 个）
 
@@ -108,9 +109,13 @@ openspec validate --all # 规格校验
 ```
 tdd-mcp-server/
 ├── src/
-│   ├── server.ts            # 唯一入口（bin: tdd-mcp-server → dist/server.js）
-│   ├── handlers/            # tools.ts（v1 15工具）/ new-tools.ts（v2 3工具）/ resources / prompts
-│   ├── services/            # 核心逻辑：生成、执行、覆盖率、重构、校验、存储、execution-guard
+│   ├── server.ts            # 唯一入口（只做协议绑定）
+│   ├── composition-root.ts  # 组合根：统一构建对象图
+│   ├── commands/registry.ts # v2 命令注册表（单一事实来源：zod + inputSchema + handler）
+│   ├── core/                # 纯核心层：parsers / similarity / analysis / ports（零 IO）
+│   ├── adapters/            # 适配器：受守卫执行网关 / JSONL 存储 / 内存 fake
+│   ├── handlers/            # MCP 投影：tools.ts（v1）/ new-tools.ts（v2）/ resources / prompts
+│   ├── services/            # 编排层：生成、执行、覆盖率、重构、校验、存储
 │   ├── i18n.ts              # 国际化
 │   └── types/               # 类型定义
 ├── skills/                  # 技能资产（SKILL.md，prompts 数据源）
