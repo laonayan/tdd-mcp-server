@@ -12,6 +12,44 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+### Fixed
+
+- 修复可导致整机假死的递归测试执行漏洞：`validate`（TDD 循环校验）内部的
+  `runQuickTests()` 与 `coverage`（覆盖率分析）此前会无守卫地 spawn `npm test`/`jest`
+  等测试命令。当被测项目自身调用本工具（dogfooding / AI 代理循环）时形成
+  "测试进程 → tdd 工具 → 再起测试进程" 的无限递归，进程树指数膨胀直至内存耗尽、
+  设备假死（上个修复只覆盖了 `runTests` 一条路径）。现新增共享守卫模块
+  `execution-guard`：检测 `JEST_WORKER_ID` / `VITEST_POOL_ID` / 子进程标记
+  `TDD_MCP_NESTED_RUN` 任一命中即拒绝再派生测试进程，如实降级返回
+  *EN: Fixed a recursive test-execution hole that could freeze the whole machine:
+  `runQuickTests()` inside `validate` (TDD cycle validation) and `coverage`
+  (coverage analysis) used to spawn `npm test`/`jest` without any guard. When the
+  project under test itself invokes this tool (dogfooding / AI-agent loops) this
+  created infinite "test process → tdd tool → test process again" recursion with
+  an exponentially growing process tree until memory exhaustion and system freeze
+  (the previous fix only covered the `runTests` path). A shared guard module
+  `execution-guard` now refuses to spawn further test processes when
+  `JEST_WORKER_ID` / `VITEST_POOL_ID` / the child marker `TDD_MCP_NESTED_RUN` is
+  detected, degrading honestly instead.*
+- 所有由本工具派生的测试/覆盖率子进程现携带硬性内存上限：
+  `NODE_OPTIONS=--max-old-space-size=1024`（可用 `TDD_MCP_CHILD_MEMORY_LIMIT_MB`
+  覆盖），并对子进程树打 `TDD_MCP_NESTED_RUN` 标记；即使出现未预期的递归，
+  单个 node 进程堆也被封顶，宁可 OOM 快速失败也不拖垮整机。`npm test` 脚本
+  亦默认加 `--max-old-space-size=2048 --maxWorkers=2 --workerIdleMemoryLimit=512MB`
+  *EN: Every test/coverage child process spawned by this tool now carries a hard
+  memory cap: `NODE_OPTIONS=--max-old-space-size=1024` (overridable via
+  `TDD_MCP_CHILD_MEMORY_LIMIT_MB`) plus the `TDD_MCP_NESTED_RUN` subtree marker;
+  even an unexpected recursion gets its per-process heap capped so it fails fast
+  with OOM instead of taking the machine down. The `npm test` script now also
+  defaults to `--max-old-space-size=2048 --maxWorkers=2 --workerIdleMemoryLimit=512MB`.*
+- `validate` 不再重复运行两次状态探测（`determineCurrentState` 结果复用），
+  嵌套场景下探测本身也不再触发任何 spawn
+  *EN: `validate` no longer runs state detection twice (the `determineCurrentState`
+  result is reused), and the detection itself no longer spawns anything in nested contexts.*
+- `coverage` 缺少 `testCommand` 参数时返回明确错误，而非晦涩的 `TypeError`
+  *EN: `coverage` without a `testCommand` argument now returns a clear error
+  instead of an obscure `TypeError`.*
+
 ### Changed
 
 - 文档（README / CHANGELOG）改为中英双文，默认中文（中文在前，英文随后）

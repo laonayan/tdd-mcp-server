@@ -6,6 +6,7 @@ import {
   TDDCycleValidation,
   TDDCycleState,
 } from '../types/tdd.js';
+import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
 
 const execAsync = promisify(exec);
 
@@ -25,9 +26,9 @@ export class TDDCycleValidatorService {
       
       // Analyze the current state
       const currentState = await this.determineCurrentState(projectPath);
-      
-      // Analyze TDD adherence
-      const analysis = await this.analyzeTDDAdherence(projectPath, commits);
+
+      // Analyze TDD adherence（复用上面已探测的 currentState，避免二次运行测试）
+      const analysis = await this.analyzeTDDAdherence(projectPath, commits, currentState);
       
       // Generate validation result
       return {
@@ -111,6 +112,14 @@ export class TDDCycleValidatorService {
   }
 
   private async runQuickTests(projectPath: string): Promise<{ passed: number; failed: number }> {
+    // 防递归：处于嵌套测试执行环境（测试运行器 worker / 我方派生的子进程树）
+    // 时禁止再 spawn 测试命令 —— 否则"测试进程 -> validate -> npm test ->
+    // 测试进程"无限递归，进程树指数膨胀直至设备假死。降级返回全零，
+    // 由调用方按"状态不明"处理（不影响 git 历史分析部分）。
+    if (isNestedExecution()) {
+      return { passed: 0, failed: 0 };
+    }
+
     try {
       // Try common test commands
       const testCommands = [
@@ -128,6 +137,9 @@ export class TDDCycleValidatorService {
           const { stdout, stderr } = await execAsync(command, {
             cwd: projectPath,
             timeout: 30000, // 30 seconds timeout for quick tests
+            maxBuffer: 5 * 1024 * 1024, // 5MB，防大输出撑爆内存
+            // 子树打嵌套标记 + node 堆内存硬上限（防未预期递归拖垮整机）
+            env: buildChildProcessEnv(),
           });
 
           return this.parseTestOutput(stdout + stderr, command);
@@ -335,7 +347,11 @@ export class TDDCycleValidatorService {
     return content.length;
   }
 
-  private async analyzeTDDAdherence(projectPath: string, commits: string[]): Promise<TDDAnalysis> {
+  private async analyzeTDDAdherence(
+    projectPath: string,
+    commits: string[],
+    currentState: TDDCycleState,
+  ): Promise<TDDAnalysis> {
     const violations: Array<{
       type: 'no_failing_test' | 'premature_implementation' | 'skipped_refactor';
       description: string;
@@ -376,9 +392,7 @@ export class TDDCycleValidatorService {
       score -= 20;
     }
 
-    // Generate suggestions based on current state
-    const currentState = await this.determineCurrentState(projectPath);
-    
+    // Generate suggestions based on current state（由调用方传入，避免重复探测）
     switch (currentState) {
       case TDDCycleState.RED:
         suggestions.push('Write minimal code to make the failing test pass');

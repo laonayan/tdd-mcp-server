@@ -8,6 +8,7 @@ import {
   TestResult,
 } from '../types/tdd.js';
 import { SUPPORTED_FRAMEWORKS, SupportedFramework } from '../types/test-frameworks.js';
+import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
 
 const execAsync = promisify(exec);
 
@@ -41,9 +42,9 @@ export class TestRunnerService {
     const command = this.buildTestCommand(framework, params);
 
     // 防递归：检测自身嵌套执行。tdd 工具会真实运行测试；若本服务正被
-    // jest 测试进程调用，再 spawn jest 会形成无限递归（每层 --maxWorkers=auto
-    // 按核数开 worker，指数级进程爆炸直至系统资源耗尽）。
-    if (this.isNestedTestExecution(framework.key)) {
+    // 测试进程调用（jest worker / 我方派生的子进程树），再 spawn 测试
+    // 命令会形成无限递归（每层固定 worker 数，进程数指数增长直至假死）。
+    if (isNestedExecution()) {
       return this.buildRecursiveGuardResult(framework.key, command);
     }
 
@@ -53,6 +54,8 @@ export class TestRunnerService {
         cwd: projectPath,
         timeout: options.timeout || 300000, // 5 minutes default
         maxBuffer: 10 * 1024 * 1024, // 10MB，防大输出 EPIPE
+        // 子树打嵌套标记 + node 堆内存硬上限（防未预期递归拖垮整机）
+        env: buildChildProcessEnv(),
       });
       const endTime = Date.now();
 
@@ -96,13 +99,9 @@ export class TestRunnerService {
   }
 
   /**
-   * 检测嵌套测试执行：JEST_WORKER_ID 是 jest 运行时注入每个 worker 的环境变量。
-   * 存在即说明"我们正运行在一个 jest 进程里"——此时再 spawn 同项目 jest
-   * 必然递归（外层套件会再次收集并执行触发本方法的测试用例）。
+   * 嵌套检测已抽到共享模块 execution-guard.ts：
+   * JEST_WORKER_ID / VITEST_POOL_ID / TDD_MCP_NESTED_RUN 任一命中即视为嵌套。
    */
-  private isNestedTestExecution(_frameworkKey: string): boolean {
-    return Boolean(process.env.JEST_WORKER_ID);
-  }
 
   /** 递归保护时返回的降级结果：如实标注被跳过及原因（不谎报通过） */
   private buildRecursiveGuardResult(frameworkKey: string, command: string): any {

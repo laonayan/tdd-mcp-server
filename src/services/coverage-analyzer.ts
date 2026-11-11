@@ -6,6 +6,7 @@ import {
   CoverageReport,
   CoverageFile,
 } from '../types/tdd.js';
+import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
 
 const execAsync = promisify(exec);
 
@@ -28,12 +29,25 @@ export class CoverageAnalyzerService {
     // Validate project path
     await this.validateProjectPath(projectPath);
 
+    // 防递归：覆盖率命令本身就是测试命令；嵌套测试环境中再执行会形成
+    // "测试进程 -> coverage -> 测试进程" 无限递归，必须拒绝。
+    if (isNestedExecution()) {
+      throw new Error('Coverage analysis skipped: nested test execution detected (recursive guard)');
+    }
+
+    if (!testCommand || !testCommand.trim()) {
+      throw new Error('Coverage analysis requires a testCommand');
+    }
+
     try {
       // Execute coverage command
       const coverageCommand = this.buildCoverageCommand(testCommand, outputFormat);
       await execAsync(coverageCommand, {
         cwd: projectPath,
         timeout: 300000, // 5 minutes
+        maxBuffer: 10 * 1024 * 1024, // 10MB，防大输出撑爆内存
+        // 子树打嵌套标记 + node 堆内存硬上限（防未预期递归拖垮整机）
+        env: buildChildProcessEnv(),
       });
 
       // Parse coverage results
