@@ -2,10 +2,10 @@
 
 ## T1: 纯核心层 src/core/
 
-- [ ] 1.1 抽取解析器纯函数（jest/mocha/pytest/generic/text/xml）到 `src/core/parsers/`，test-runner 委托调用；新增零 mock 单测
-- [ ] 1.2 抽取相似度引擎（calculateTextSimilarity/calculateTagSimilarity/calculateFeatureSimilarity）到 `src/core/similarity.ts`，feature-management 委托；新增零 mock 单测
-- [ ] 1.3 抽取提交模式分析与代码质量启发式到 `src/core/analysis.ts`，tdd-cycle-validator 委托
-- [ ] 1.4 全量门绿，提交
+- [x] 1.1 抽取解析器纯函数（jest/mocha/pytest/generic/text/xml）到 `src/core/parsers/`，test-runner 委托调用；新增零 mock 单测
+- [x] 1.2 抽取相似度引擎（calculateTextSimilarity/calculateTagSimilarity/calculateFeatureSimilarity）到 `src/core/similarity.ts`，feature-management 委托；新增零 mock 单测
+- [x] 1.3 抽取提交模式分析与代码质量启发式到 `src/core/analysis.ts`，tdd-cycle-validator 委托
+- [x] 1.4 全量门绿，提交
 
 ## T2: 端口与唯一执行网关
 

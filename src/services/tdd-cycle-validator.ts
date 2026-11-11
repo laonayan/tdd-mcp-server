@@ -7,6 +7,15 @@ import {
   TDDCycleState,
 } from '../types/tdd.js';
 import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
+// V3：分析与质量启发式下沉纯核心层
+import {
+  analyzeCommitPatterns,
+  parseQuickTestOutput,
+  detectSimpleDuplication,
+  detectComplexityIssues,
+  detectLongMethods,
+  type CodeQualityAnalysis,
+} from '../core/analysis.js';
 
 const execAsync = promisify(exec);
 
@@ -142,7 +151,7 @@ export class TDDCycleValidatorService {
             env: buildChildProcessEnv(),
           });
 
-          return this.parseTestOutput(stdout + stderr, command);
+          return parseQuickTestOutput(stdout + stderr, command);
         } catch (error: any) {
           // If command fails, try next one
           continue;
@@ -153,42 +162,6 @@ export class TDDCycleValidatorService {
     } catch (error) {
       return { passed: 0, failed: 0 };
     }
-  }
-
-  private parseTestOutput(output: string, command: string): { passed: number; failed: number } {
-    let passed = 0;
-    let failed = 0;
-
-    if (command.includes('jest') || command.includes('npm test')) {
-      const passMatch = output.match(/(\d+) passed/);
-      const failMatch = output.match(/(\d+) failed/);
-      passed = passMatch ? parseInt(passMatch[1]) : 0;
-      failed = failMatch ? parseInt(failMatch[1]) : 0;
-    } else if (command.includes('pytest')) {
-      const resultMatch = output.match(/(\d+) passed(?:, (\d+) failed)?/);
-      if (resultMatch) {
-        passed = parseInt(resultMatch[1]);
-        failed = resultMatch[2] ? parseInt(resultMatch[2]) : 0;
-      }
-    } else if (command.includes('go test')) {
-      const passMatch = output.match(/ok\s+\S+/g);
-      const failMatch = output.match(/FAIL\s+\S+/g);
-      passed = passMatch ? passMatch.length : 0;
-      failed = failMatch ? failMatch.length : 0;
-    } else {
-      // Generic parsing
-      const passedLines = output.split('\n').filter(line => 
-        line.includes('passed') || line.includes('OK') || line.includes('✓'),
-      ).length;
-      const failedLines = output.split('\n').filter(line => 
-        line.includes('failed') || line.includes('FAIL') || line.includes('✗') || line.includes('ERROR'),
-      ).length;
-      
-      passed = passedLines;
-      failed = failedLines;
-    }
-
-    return { passed, failed };
   }
 
   private async needsRefactoring(projectPath: string): Promise<boolean> {
@@ -233,118 +206,15 @@ export class TDDCycleValidatorService {
         const filePath = path.join(projectPath, file);
         const content = await fs.readFile(filePath, 'utf8');
         
-        analysis.duplicationCount += this.detectSimpleDuplication(content);
-        analysis.complexityIssues += this.detectComplexityIssues(content);
-        analysis.longMethods += this.detectLongMethods(content);
+        analysis.duplicationCount += detectSimpleDuplication(content);
+        analysis.complexityIssues += detectComplexityIssues(content);
+        analysis.longMethods += detectLongMethods(content);
       }
     } catch (error) {
       // Analysis failed, assume no issues
     }
 
     return analysis;
-  }
-
-  private detectSimpleDuplication(content: string): number {
-    const lines = content.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0 && !line.startsWith('//') && !line.startsWith('*'));
-
-    const lineMap = new Map<string, number>();
-    
-    for (const line of lines) {
-      if (line.length > 20) { // Only consider substantial lines
-        lineMap.set(line, (lineMap.get(line) || 0) + 1);
-      }
-    }
-
-    let duplicateLines = 0;
-    for (const [line, count] of lineMap.entries()) {
-      if (count > 1) {
-        duplicateLines += count - 1;
-      }
-    }
-
-    return Math.floor(duplicateLines / 3); // Group into potential duplication blocks
-  }
-
-  private detectComplexityIssues(content: string): number {
-    // Count nested structures and complex conditions
-    let complexity = 0;
-    
-    // Nested if statements
-    const nestedIfMatches = content.match(/if\s*\([^)]*\)\s*\{[^}]*if\s*\(/g);
-    complexity += nestedIfMatches ? nestedIfMatches.length : 0;
-    
-    // Complex boolean expressions
-    const complexBooleanMatches = content.match(/if\s*\([^)]*(&&|||)[^)]*(&&|||)[^)]*\)/g);
-    complexity += complexBooleanMatches ? complexBooleanMatches.length : 0;
-    
-    // Long parameter lists
-    const longParamMatches = content.match(/\([^)]*,[^)]*,[^)]*,[^)]*,[^)]*\)/g);
-    complexity += longParamMatches ? longParamMatches.length : 0;
-
-    return complexity;
-  }
-
-  private detectLongMethods(content: string): number {
-    let longMethods = 0;
-    
-    // Simple method detection and line counting
-    const methodPatterns = [
-      /function\s+\w+\s*\([^)]*\)\s*\{/g,
-      /def\s+\w+\s*\([^)]*\):/g,
-      /(?:public|private|protected)?\s*\w+\s+\w+\s*\([^)]*\)\s*\{/g,
-    ];
-
-    for (const pattern of methodPatterns) {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const methodStart = match.index;
-        const methodEnd = this.findMethodEndIndex(content, methodStart);
-        const methodLines = content.substring(methodStart, methodEnd).split('\n').length;
-        
-        if (methodLines > 20) {
-          longMethods++;
-        }
-      }
-    }
-
-    return longMethods;
-  }
-
-  private findMethodEndIndex(content: string, startIndex: number): number {
-    // Simple brace matching
-    let braceCount = 0;
-    let inString = false;
-    let stringChar = '';
-    
-    for (let i = startIndex; i < content.length; i++) {
-      const char = content[i];
-      
-      if (inString) {
-        if (char === stringChar && content[i - 1] !== '\\') {
-          inString = false;
-        }
-        continue;
-      }
-      
-      if (char === '"' || char === '\'' || char === '`') {
-        inString = true;
-        stringChar = char;
-        continue;
-      }
-      
-      if (char === '{') {
-        braceCount++;
-      } else if (char === '}') {
-        braceCount--;
-        if (braceCount === 0) {
-          return i + 1;
-        }
-      }
-    }
-    
-    return content.length;
   }
 
   private async analyzeTDDAdherence(
@@ -362,7 +232,7 @@ export class TDDCycleValidatorService {
     let score = 100;
 
     // Analyze commit patterns
-    const commitAnalysis = this.analyzeCommitPatterns(commits);
+    const commitAnalysis = analyzeCommitPatterns(commits);
     
     // Check for TDD violations
     if (commitAnalysis.hasImplementationBeforeTests) {
@@ -424,54 +294,6 @@ export class TDDCycleValidatorService {
       score: Math.max(score, 0),
     };
   }
-
-  private analyzeCommitPatterns(commits: string[]): CommitPatternAnalysis {
-    const testKeywords = ['test', 'spec', 'TDD', 'failing test', 'red'];
-    const implementationKeywords = ['implement', 'add', 'feature', 'fix', 'green'];
-    const refactorKeywords = ['refactor', 'cleanup', 'improve', 'extract', 'rename'];
-
-    let testCommits = 0;
-    let implementationCommits = 0;
-    let refactorCommits = 0;
-    let hasImplementationBeforeTests = false;
-
-    for (let i = 0; i < commits.length; i++) {
-      const commit = commits[i].toLowerCase();
-      
-      const isTest = testKeywords.some(keyword => commit.includes(keyword));
-      const isImplementation = implementationKeywords.some(keyword => commit.includes(keyword));
-      const isRefactor = refactorKeywords.some(keyword => commit.includes(keyword));
-
-      if (isTest) testCommits++;
-      if (isImplementation) implementationCommits++;
-      if (isRefactor) refactorCommits++;
-
-      // Check if implementation comes before tests (anti-pattern)
-      if (isImplementation && i > 0) {
-        const previousCommit = commits[i - 1].toLowerCase();
-        const previousIsTest = testKeywords.some(keyword => previousCommit.includes(keyword));
-        if (!previousIsTest) {
-          hasImplementationBeforeTests = true;
-        }
-      }
-    }
-
-    return {
-      testCommits,
-      implementationCommits,
-      refactorCommits,
-      hasImplementationBeforeTests,
-      lacksTestCommits: testCommits === 0 && commits.length > 0,
-      lacksRefactorCommits: refactorCommits === 0,
-      hasMultipleFeatureCommits: implementationCommits > 2,
-    };
-  }
-}
-
-interface CodeQualityAnalysis {
-  duplicationCount: number;
-  complexityIssues: number;
-  longMethods: number;
 }
 
 interface TDDAnalysis {
@@ -482,14 +304,4 @@ interface TDDAnalysis {
   }>;
   suggestions: string[];
   score: number;
-}
-
-interface CommitPatternAnalysis {
-  testCommits: number;
-  implementationCommits: number;
-  refactorCommits: number;
-  hasImplementationBeforeTests: boolean;
-  lacksTestCommits: boolean;
-  lacksRefactorCommits: boolean;
-  hasMultipleFeatureCommits: boolean;
 }

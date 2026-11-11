@@ -3,6 +3,8 @@ import { TestResults } from '../../types/tdd.js';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import * as util from 'util';
+// V3：解析逻辑已下沉纯核心层，测试直接对纯函数断言（零 mock）
+import * as parsers from '../../core/parsers/test-results.js';
 
 // Mock child_process exec
 jest.mock('child_process');
@@ -238,8 +240,7 @@ describe('TestRunnerService', () => {
         }],
       };
 
-      const testRunnerAny = testRunner as any;
-      const result = testRunnerAny.parseJestResults(jestData);
+      const result = parsers.parseJestResults(jestData);
 
       expect(result.framework).toBe('jest');
       expect(result.suites).toHaveLength(1);
@@ -267,8 +268,7 @@ describe('TestRunnerService', () => {
         },
       };
 
-      const testRunnerAny = testRunner as any;
-      const result = testRunnerAny.parseMochaResults(mochaData);
+      const result = parsers.parseMochaResults(mochaData);
 
       expect(result.framework).toBe('mocha');
       expect(result.suites).toHaveLength(1);
@@ -285,11 +285,10 @@ describe('TestRunnerService', () => {
       `;
       const stderr = '';
 
-      const framework = { name: 'generic' };
+      const frameworkName = 'generic';
       const duration = 1000;
 
-      const testRunnerAny = testRunner as any;
-      const result = testRunnerAny.parseTextResults(stdout, stderr, framework, duration);
+      const result = parsers.parseTextResults(stdout, stderr, frameworkName, duration);
 
       expect(result.overall.passed).toBe(1);
       expect(result.overall.failed).toBe(1);
@@ -300,13 +299,11 @@ describe('TestRunnerService', () => {
 
   describe('mapJestStatus', () => {
     it('should map Jest status correctly', () => {
-      const testRunnerAny = testRunner as any;
-      
-      expect(testRunnerAny.mapJestStatus('passed')).toBe('passed');
-      expect(testRunnerAny.mapJestStatus('failed')).toBe('failed');
-      expect(testRunnerAny.mapJestStatus('skipped')).toBe('skipped');
-      expect(testRunnerAny.mapJestStatus('pending')).toBe('pending');
-      expect(testRunnerAny.mapJestStatus('unknown')).toBe('failed');
+      expect(parsers.mapJestStatus('passed')).toBe('passed');
+      expect(parsers.mapJestStatus('failed')).toBe('failed');
+      expect(parsers.mapJestStatus('skipped')).toBe('skipped');
+      expect(parsers.mapJestStatus('pending')).toBe('pending');
+      expect(parsers.mapJestStatus('unknown')).toBe('failed');
     });
   });
 
@@ -321,18 +318,15 @@ describe('TestRunnerService', () => {
         },
       };
 
-      const testRunnerAny = testRunner as any;
-      const coverage = testRunnerAny.calculateCoverage(coverageMap);
+      const coverage = parsers.calculateCoverageFromMap(coverageMap);
 
       expect(coverage).toBe(80); // 4 out of 5 statements covered
     });
 
     it('should handle empty coverage map', () => {
-      const testRunnerAny = testRunner as any;
-      
-      expect(testRunnerAny.calculateCoverage({})).toBe(0);
-      expect(testRunnerAny.calculateCoverage(null)).toBe(0);
-      expect(testRunnerAny.calculateCoverage(undefined)).toBe(0);
+      expect(parsers.calculateCoverageFromMap({})).toBe(0);
+      expect(parsers.calculateCoverageFromMap(null)).toBe(0);
+      expect(parsers.calculateCoverageFromMap(undefined)).toBe(0);
     });
   });
 
