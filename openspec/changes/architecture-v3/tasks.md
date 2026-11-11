@@ -22,10 +22,10 @@
 
 ## T4: 组合根与命令注册表
 
-- [ ] 4.1 `src/composition-root.ts` 构建对象图；server.ts 只装配；handlers 构造函数全注入（移除内部 new）
-- [ ] 4.2 `src/commands/registry.ts`：tdd/feature/tracking 全部子命令注册（zod 校验 + inputSchema + handler）；new-tools.ts 变注册表投影；tools/list 契约不变
-- [ ] 4.3 注册表 zod 校验接入（宽松校验、错误语义沿用 INVALID_PARAMS 本地化文案）；集成 9/9 回归
-- [ ] 4.4 全量门绿，提交
+- [x] 4.1 `src/composition-root.ts` 构建对象图；server.ts 只装配；handlers 构造函数全注入（移除内部 new）
+- [x] 4.2 `src/commands/registry.ts`：tdd/feature/tracking 全部子命令注册（zod 校验 + inputSchema + handler）；new-tools.ts 变注册表投影；tools/list 契约不变
+- [x] 4.3 注册表 zod 校验接入（宽松校验、错误语义沿用 INVALID_PARAMS 本地化文案）；集成 9/9 回归
+- [x] 4.4 全量门绿，提交
 
 ## T5: 收尾
 

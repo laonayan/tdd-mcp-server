@@ -15,8 +15,9 @@ import {
 import { toolsHandler } from './handlers/tools.js';
 import { resourcesHandler } from './handlers/resources.js';
 import { promptsHandler } from './handlers/prompts.js';
-import { NewToolsHandler } from './handlers/new-tools.js';
 import { I18nService } from './i18n.js';
+// V3：组合根装配（server.ts 只做启动与协议绑定）
+import { createAppContainer } from './composition-root.js';
 
 // Server information
 const SERVER_INFO = {
@@ -35,8 +36,8 @@ const defaultLocale = (process.env.DEFAULT_LOCALE as 'zh' | 'en') || 'zh'; // �
 // Set default locale
 i18nService.setLocale(defaultLocale);
 
-// Initialize tool handlers
-const newToolsHandler = new NewToolsHandler(i18nService);
+// V3：由组合根构建对象图，server 只绑定协议
+const { newToolsHandler } = createAppContainer();
 
 // Create server instance
 const server = new Server(SERVER_INFO, {
