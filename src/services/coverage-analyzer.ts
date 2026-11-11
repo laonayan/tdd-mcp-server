@@ -1,14 +1,13 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { promises as fs } from 'fs';
 import path from 'path';
 import {
   CoverageReport,
   CoverageFile,
 } from '../types/tdd.js';
-import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
-
-const execAsync = promisify(exec);
+import { isNestedExecution } from './execution-guard.js';
+// V3：唯一受守卫 spawn 网关
+import { GuardedCommandExecutor } from '../adapters/guarded-command-executor.js';
+import type { CommandExecutor } from '../core/ports.js';
 
 interface CoverageAnalysisParams {
   projectPath: string;
@@ -23,6 +22,12 @@ interface CoverageAnalysisParams {
 }
 
 export class CoverageAnalyzerService {
+  private readonly executor: CommandExecutor;
+
+  constructor(executor?: CommandExecutor) {
+    this.executor = executor ?? new GuardedCommandExecutor();
+  }
+
   async analyzeCoverage(params: CoverageAnalysisParams): Promise<CoverageReport> {
     const { projectPath, testCommand, thresholds, outputFormat = 'json' } = params;
 
@@ -42,13 +47,8 @@ export class CoverageAnalyzerService {
     try {
       // Execute coverage command
       const coverageCommand = this.buildCoverageCommand(testCommand, outputFormat);
-      await execAsync(coverageCommand, {
-        cwd: projectPath,
-        timeout: 300000, // 5 minutes
-        maxBuffer: 10 * 1024 * 1024, // 10MB，防大输出撑爆内存
-        // 子树打嵌套标记 + node 堆内存硬上限（防未预期递归拖垮整机）
-        env: buildChildProcessEnv(),
-      });
+      // V3：经唯一网关执行（嵌套拒绝/内存上限由网关统一保证）
+      await this.executor.execute(coverageCommand, { cwd: projectPath });
 
       // Parse coverage results
       const coverageData = await this.parseCoverageResults(projectPath, outputFormat);

@@ -9,10 +9,10 @@
 
 ## T2: 端口与唯一执行网关
 
-- [ ] 2.1 `src/core/ports.ts` 定义 `CommandExecutor`；`src/adapters/guarded-command-executor.ts` 实现（嵌套拒绝 + 内存上限 env + maxBuffer/timeout 策略）
-- [ ] 2.2 test-runner / coverage-analyzer / tdd-cycle-validator 三处 execAsync 收敛到网关（行为等价，含守卫单测迁移）
-- [ ] 2.3 架构守卫测试：`child_process` import 仅限 `src/adapters/` 与 execution-guard
-- [ ] 2.4 全量门绿，提交
+- [x] 2.1 `src/core/ports.ts` 定义 `CommandExecutor`；`src/adapters/guarded-command-executor.ts` 实现（嵌套拒绝 + 内存上限 env + maxBuffer/timeout 策略）
+- [x] 2.2 test-runner / coverage-analyzer / tdd-cycle-validator 三处 execAsync 收敛到网关（行为等价，含守卫单测迁移）
+- [x] 2.3 架构守卫测试：`child_process` import 仅限 `src/adapters/` 与 execution-guard
+- [x] 2.4 全量门绿，提交
 
 ## T3: 仓储接口与测试去污染
 

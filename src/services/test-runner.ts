@@ -1,16 +1,15 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { promises as fs } from 'fs';
 import path from 'path';
 import {
   TestResults,
 } from '../types/tdd.js';
 import { SUPPORTED_FRAMEWORKS } from '../types/test-frameworks.js';
-import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
+import { isNestedExecution } from './execution-guard.js';
 // 纯核心解析器（零 IO）：V3 架构下沉层
 import * as parsers from '../core/parsers/test-results.js';
-
-const execAsync = promisify(exec);
+// V3：唯一受守卫 spawn 网关
+import { GuardedCommandExecutor } from '../adapters/guarded-command-executor.js';
+import type { CommandExecutor } from '../core/ports.js';
 
 interface TestRunnerParams {
   projectPath: string;
@@ -30,6 +29,12 @@ interface TestRunnerParams {
  * 解析逻辑全部委托 src/core/parsers（纯函数）。
  */
 export class TestRunnerService {
+  private readonly executor: CommandExecutor;
+
+  constructor(executor?: CommandExecutor) {
+    this.executor = executor ?? new GuardedCommandExecutor();
+  }
+
   async runTests(params: TestRunnerParams): Promise<TestResults> {
     const { projectPath, testFiles, testFramework, options = {} } = params;
 
@@ -54,12 +59,10 @@ export class TestRunnerService {
 
     try {
       const startTime = Date.now();
-      const { stdout, stderr } = await execAsync(command, {
+      // V3：经唯一网关执行（嵌套拒绝/内存上限/maxBuffer/timeout 由网关统一保证）
+      const { stdout, stderr } = await this.executor.execute(command, {
         cwd: projectPath,
-        timeout: options.timeout || 300000, // 5 minutes default
-        maxBuffer: 10 * 1024 * 1024, // 10MB，防大输出 EPIPE
-        // 子树打嵌套标记 + node 堆内存硬上限（防未预期递归拖垮整机）
-        env: buildChildProcessEnv(),
+        timeoutMs: options.timeout || 300000,
       });
       const endTime = Date.now();
 

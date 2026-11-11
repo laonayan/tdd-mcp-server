@@ -1,12 +1,13 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { promises as fs } from 'fs';
 import path from 'path';
 import {
   TDDCycleValidation,
   TDDCycleState,
 } from '../types/tdd.js';
-import { isNestedExecution, buildChildProcessEnv } from './execution-guard.js';
+import { isNestedExecution } from './execution-guard.js';
+// V3：唯一受守卫 spawn 网关
+import { GuardedCommandExecutor } from '../adapters/guarded-command-executor.js';
+import type { CommandExecutor } from '../core/ports.js';
 // V3：分析与质量启发式下沉纯核心层
 import {
   analyzeCommitPatterns,
@@ -17,8 +18,6 @@ import {
   type CodeQualityAnalysis,
 } from '../core/analysis.js';
 
-const execAsync = promisify(exec);
-
 interface TDDCycleValidationParams {
   projectPath: string;
   gitHistory?: string[];
@@ -26,6 +25,12 @@ interface TDDCycleValidationParams {
 }
 
 export class TDDCycleValidatorService {
+  private readonly executor: CommandExecutor;
+
+  constructor(executor?: CommandExecutor) {
+    this.executor = executor ?? new GuardedCommandExecutor();
+  }
+
   async validateCycle(params: TDDCycleValidationParams): Promise<TDDCycleValidation> {
     const { projectPath, gitHistory, timeWindow = '1 hour' } = params;
 
@@ -55,7 +60,7 @@ export class TDDCycleValidatorService {
   private async getRecentCommits(projectPath: string, timeWindow: string): Promise<string[]> {
     try {
       const gitCommand = `git log --since="${timeWindow}" --oneline --pretty=format:"%h|%s|%an|%ad" --date=iso`;
-      const { stdout } = await execAsync(gitCommand, { cwd: projectPath });
+      const { stdout } = await this.executor.execute(gitCommand, { cwd: projectPath });
       
       return stdout.split('\n').filter(line => line.trim().length > 0);
     } catch (error) {
@@ -143,12 +148,10 @@ export class TDDCycleValidatorService {
 
       for (const command of testCommands) {
         try {
-          const { stdout, stderr } = await execAsync(command, {
+          const { stdout, stderr } = await this.executor.execute(command, {
             cwd: projectPath,
-            timeout: 30000, // 30 seconds timeout for quick tests
+            timeoutMs: 30000, // 30 seconds timeout for quick tests
             maxBuffer: 5 * 1024 * 1024, // 5MB，防大输出撑爆内存
-            // 子树打嵌套标记 + node 堆内存硬上限（防未预期递归拖垮整机）
-            env: buildChildProcessEnv(),
           });
 
           return parseQuickTestOutput(stdout + stderr, command);
