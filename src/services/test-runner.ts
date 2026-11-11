@@ -39,12 +39,20 @@ export class TestRunnerService {
 
     // Build and execute test command
     const command = this.buildTestCommand(framework, params);
-    
+
+    // 防递归：检测自身嵌套执行。tdd 工具会真实运行测试；若本服务正被
+    // jest 测试进程调用，再 spawn jest 会形成无限递归（每层 --maxWorkers=auto
+    // 按核数开 worker，指数级进程爆炸直至系统资源耗尽）。
+    if (this.isNestedTestExecution(framework.key)) {
+      return this.buildRecursiveGuardResult(framework.key, command);
+    }
+
     try {
       const startTime = Date.now();
       const { stdout, stderr } = await execAsync(command, {
         cwd: projectPath,
         timeout: options.timeout || 300000, // 5 minutes default
+        maxBuffer: 10 * 1024 * 1024, // 10MB，防大输出 EPIPE
       });
       const endTime = Date.now();
 
@@ -85,6 +93,33 @@ export class TestRunnerService {
     } catch (error) {
       throw new Error(`Invalid project path: ${projectPath}`);
     }
+  }
+
+  /**
+   * 检测嵌套测试执行：JEST_WORKER_ID 是 jest 运行时注入每个 worker 的环境变量。
+   * 存在即说明"我们正运行在一个 jest 进程里"——此时再 spawn 同项目 jest
+   * 必然递归（外层套件会再次收集并执行触发本方法的测试用例）。
+   */
+  private isNestedTestExecution(_frameworkKey: string): boolean {
+    return Boolean(process.env.JEST_WORKER_ID);
+  }
+
+  /** 递归保护时返回的降级结果：如实标注被跳过及原因（不谎报通过） */
+  private buildRecursiveGuardResult(frameworkKey: string, command: string): any {
+    return {
+      framework: frameworkKey,
+      suites: [],
+      overall: {
+        total: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        duration: 0,
+      },
+      timestamp: new Date(),
+      note: 'Skipped nested test execution: already running inside a jest worker ' +
+        '(recursive self-invocation guard). Command not run: ' + command,
+    };
   }
 
   private buildTestCommand(framework: any, params: TestRunnerParams): string {
@@ -136,14 +171,16 @@ export class TestRunnerService {
 
   private getParallelFlag(frameworkKey: string): string {
     const parallelFlags: Record<string, string> = {
-      jest: ' --maxWorkers=auto',
-      vitest: ' --reporter=verbose',
-      pytest: ' -n auto',
+      // 注意：不使用 --maxWorkers=auto。tdd 工具允许嵌套调用场景，
+      // auto 在多层叠加时按 CPU 核数开满 worker，进程数指数增长。
+      jest: ' --maxWorkers=2',
+      vitest: ' --pool=threads --poolOptions.threads.maxThreads=2',
+      pytest: ' -n 2',
       junit5: ' -Djunit.parallel.enabled=true',
-      gotest: ' -parallel',
-      cargo_test: ' --jobs 0',
+      gotest: ' -parallel 2',
+      cargo_test: ' --jobs 2',
     };
-    
+
     return parallelFlags[frameworkKey] || '';
   }
 

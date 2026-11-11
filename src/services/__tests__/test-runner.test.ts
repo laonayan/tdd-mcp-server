@@ -49,6 +49,51 @@ describe('TestRunnerService', () => {
       expect(true).toBe(true);
     });
 
+    it('should refuse nested execution inside a jest worker (recursive guard)', async () => {
+      // 复现死机链：单元测试 -> tdd 工具 -> runTests() -> 再 spawn 本项目 jest
+      // -> 套件被再次收集 -> 无限递归（每层按核数开 worker，指数爆炸）。
+      // JEST_WORKER_ID 是 jest 注入 worker 的环境变量，守卫据此拒绝执行。
+      const workerId = process.env.JEST_WORKER_ID;
+      process.env.JEST_WORKER_ID = '99'; // 模拟"正运行在 jest 内"
+
+      // 本套件 mock 了 fs：让路径校验放行，确保到达守卫分支
+      const anyRunner = testRunner as any;
+      jest
+        .spyOn(anyRunner, 'validateProjectPath')
+        .mockResolvedValue(undefined);
+
+      try {
+        const params = {
+          projectPath: '/valid/project',
+          testFramework: 'jest',
+        };
+
+        const result: any = await testRunner.runTests(params);
+
+        // 守卫触发：不执行命令，返回带说明的空结果（如实标注，不谎报通过）
+        expect(result.suites).toEqual([]);
+        expect(result.note).toContain('recursive self-invocation guard');
+        expect(result.note).toContain('Command not run');
+      } finally {
+        anyRunner.validateProjectPath.mockRestore();
+        if (workerId === undefined) {
+          delete process.env.JEST_WORKER_ID;
+        } else {
+          process.env.JEST_WORKER_ID = workerId;
+        }
+      }
+    });
+
+    it('builds parallel flags with bounded workers (no --maxWorkers=auto)', () => {
+      // auto 在嵌套调用时按 CPU 核数开满 worker，进程数指数增长直至死机
+      const cmd = (testRunner as any).buildTestCommand(
+        (testRunner as any).getFrameworkConfig('jest'),
+        { options: {} },
+      );
+      expect(cmd).toContain('--maxWorkers=2');
+      expect(cmd).not.toContain('auto');
+    });
+
     it('should handle unsupported framework', async () => {
       const params = {
         projectPath: '/test/project',
@@ -130,7 +175,8 @@ describe('TestRunnerService', () => {
 
       expect(command).toContain('--coverage');
       expect(command).toContain('--verbose');
-      expect(command).toContain('--maxWorkers=auto');
+      // 固定 worker 数防递归时进程指数爆炸（原 --maxWorkers=auto 已废弃）
+      expect(command).toContain('--maxWorkers=2');
       expect(command).toContain('test1.js test2.js');
     });
 
@@ -154,7 +200,7 @@ describe('TestRunnerService', () => {
 
       expect(command).toContain('pytest');
       expect(command).toContain('-v');
-      expect(command).toContain('-n auto');
+      expect(command).toContain('-n 2');
     });
   });
 
