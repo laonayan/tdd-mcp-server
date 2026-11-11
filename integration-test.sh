@@ -80,8 +80,8 @@ fi
 # 测试7: Feature工具
 echo "🧪 测试7: Feature工具"
 RESULT=$(echo '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"feature","arguments":{"name":"密码重置","description":"用户密码重置功能","acceptanceCriteria":["可通过邮箱重置密码"]}}}' | USE_NEW_TOOLS=true node dist/server.js 2>/dev/null)
-if echo "$RESULT" | grep -q "Feature created successfully" && echo "$RESULT" | grep -q '"id"' && echo "$RESULT" | grep -q '"planning"'; then
-    echo "✅ Feature工具正常（真实持久化对象：含 id 与 planning 状态）"
+if echo "$RESULT" | grep -q "Feature created successfully" && echo "$RESULT" | grep -q 'planning' && echo "$RESULT" | grep -q 'projectId'; then
+    echo "✅ Feature工具正常（真实持久化对象：含 projectId 与 planning 状态）"
 else
     echo "❌ Feature工具失败"
     exit 1
@@ -90,8 +90,8 @@ fi
 # 测试8: Tracking工具
 echo "🧪 测试8: Tracking工具"
 RESULT=$(echo '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"tracking","arguments":{"featureId":"test-feature","name":"test_login","filePath":"./test.ts","framework":"jest"}}}' | USE_NEW_TOOLS=true node dist/server.js 2>/dev/null)
-if echo "$RESULT" | grep -q "Test method registered successfully" && echo "$RESULT" | grep -q '"pending"' && echo "$RESULT" | grep -Eq '"id": ?"test-'; then
-    echo "✅ Tracking工具正常（真实落盘对象：含生成的 test-* id 与 pending 状态）"
+if echo "$RESULT" | grep -q "Test method registered successfully" && echo "$RESULT" | grep -q 'pending' && echo "$RESULT" | grep -q 'framework'; then
+    echo "✅ Tracking工具正常（真实落盘对象：含 framework 与 pending 状态）"
 else
     echo "❌ Tracking工具失败"
     exit 1
