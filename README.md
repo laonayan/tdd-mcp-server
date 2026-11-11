@@ -54,21 +54,21 @@ A complete Model Context Protocol (MCP) server that provides a **simplified yet 
   - `validate` - 验证TDD循环 / validate the TDD cycle
 
 ### 2. `feature` - 功能管理工具 | feature management tool
-项目功能和需求管理 / Manage project features and requirements:
-- **默认行为 Default**: 创建新功能 / create a new feature
+项目功能和需求管理 / Manage project features and requirements（真实持久化，返回含 `id`/`status` 的对象 / real persistence, returns the stored object with `id`/`status`）:
+- **默认行为 Default**: 创建新功能 / create a new feature（需 `acceptanceCriteria`，至少一条 / requires at least one acceptance criterion）
 - **子命令 Subcommands**:
   - `create` - 创建新功能（默认 / create a feature, default）
   - `update` - 更新功能状态 / update feature status
   - `link` - 关联文件到功能 / link files to a feature
-  - `find` - 查找相似功能 / find similar features
+  - `find` - 查找相似功能（返回相似度与理由 / returns similarity scores and reasons）
 
 ### 3. `tracking` - 测试跟踪工具 | test tracking tool
-测试方法执行跟踪 / Track test-method execution:
+测试方法执行跟踪 / Track test-method execution（真实落盘并回读 / real persistence with read-back）:
 - **默认行为 Default**: 注册测试方法 / register a test method
 - **子命令 Subcommands**:
   - `register` - 注册测试方法（默认 / register a test method, default）
-  - `result` - 更新测试执行结果 / update test execution results
-  - `status` - 更新测试方法状态 / update test-method status
+  - `result` - 更新测试执行结果（`methodId` + `result.passed` / update execution results）
+  - `status` - 更新测试方法状态（`methodId` + `status` / update test-method status）
 
 ## 🌍 语言和框架支持 | Language & framework support
 
@@ -556,6 +556,14 @@ tracking({
 | `USE_NEW_TOOLS` | 启用v2.0新工具系统 / enable the v2.0 tool system | `false` |
 | `DEFAULT_LOCALE` | 默认语言(zh/en) / default locale | `zh` |
 | `PROJECT_PATH` | 项目路径 / project path | `process.cwd()` |
+| `TDD_MCP_NESTED_RUN` | 嵌套执行标记（由本服务派生的子进程树自动注入，树内拒绝再 spawn 测试进程 / nested-run marker injected into spawned subtrees; further test spawning is refused inside） | 未设置 / unset |
+| `TDD_MCP_CHILD_MEMORY_LIMIT_MB` | 派生子进程 node 堆上限（MB）/ heap cap (MB) for spawned child node processes | `1024` |
+
+### 运行安全：内存限制 | Run safety: memory limits
+
+本服务派生的所有测试/覆盖率子进程都会被硬性封顶内存（`NODE_OPTIONS=--max-old-space-size`，默认 1024MB，可用 `TDD_MCP_CHILD_MEMORY_LIMIT_MB` 覆盖），并检测嵌套执行环境（jest/vitest worker 或本服务子进程树）后拒绝递归 spawn——宁可单进程 OOM 快速失败，也不拖垮整机。
+
+Every test/coverage child process spawned by this server carries a hard memory cap (`NODE_OPTIONS=--max-old-space-size`, default 1024 MB, overridable via `TDD_MCP_CHILD_MEMORY_LIMIT_MB`) and refuses to spawn further test processes when running inside a nested test environment (jest/vitest worker or our own spawned subtree) — fail fast with OOM rather than taking the machine down.
 
 ### 开发命令 | Development commands
 
@@ -563,7 +571,7 @@ tracking({
 npm run build          # 构建项目 / build the project
 npm run dev           # 开发模式 / development mode
 npm run start         # 生产模式 / production mode
-npm run test          # 运行测试（CJS 转换模式，支持 jest.mock）/ run tests (CJS transform mode, supports jest.mock)
+npm run test          # 运行测试（默认限内存：2GB 堆 + 2 worker + 512MB 空闲回收）/ run tests (memory-bounded by default)
 npm run test:esm      # 运行测试（原生 ESM 模式，实验性）/ run tests (native ESM mode, experimental)
 npm run test:watch    # 监视模式测试 / watch-mode tests
 npm run lint          # ESLint 9 扁平配置 / ESLint 9 flat config
@@ -573,10 +581,12 @@ npm run clean         # 清理构建文件 / clean build artifacts
 ### 测试和验证 | Test and verify
 
 ```bash
-# 运行集成测试 / Run integration tests
+# 运行集成测试（先 export NODE_OPTIONS="--max-old-space-size=1536" 封顶子进程树）
+# Run integration tests (export NODE_OPTIONS first to cap the child-process tree)
 ./integration-test.sh
 
-# 运行单元测试 / Run unit tests
+# 运行单元测试（脚本已内置内存上限与 worker 限制）
+# Run unit tests (the script already caps heap and workers)
 npm test
 
 # 检查构建 / Check the build
@@ -682,6 +692,13 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"tdd","argu
 
 ## 📈 最新更新 | Latest changes
 
+### Unreleased（未发布 / next release）
+
+- ✅ **诚实化接线 Honest wiring**: v2 `feature` / `tracking` 全部子命令真实调用 service 并返回持久化产物（含 `id`、`status`）；`feature create` 缺少 `acceptanceCriteria` 时如实报错（原先返回固定成功文案）/ all subcommands call real services and return persisted artifacts; `feature create` without `acceptanceCriteria` now errors honestly instead of returning a fixed success string
+- ✅ **运行安全 Run safety**: 修复可致整机假死的递归测试执行漏洞（`validate`/`coverage` 未设防的 spawn 路径），新增共享守卫 `execution-guard`：嵌套环境拒绝再派生 + 子进程 node 堆硬上限（默认 1024MB）/ fixed a recursive test-execution hole that could freeze the machine; added the shared `execution-guard` (nested-run refusal + hard heap cap on every spawned process)
+- ✅ **结果正确性 Result correctness**: 测试结果文件按 `projectPath` 解析（不再误读服务器 cwd 陈旧文件）；`loadTestMethod` 逐项目早退读取 / test result files resolve against `projectPath`; `loadTestMethod` reads per-project files with early exit
+- ✅ **测试基建 Test infra**: `npm test` 默认带 `--max-old-space-size=2048 --maxWorkers=2 --workerIdleMemoryLimit=512MB`；新增嵌套守卫与诚实性回归用例 / `npm test` now ships bounded memory by default; added nested-guard and honesty regression tests
+
 ### v2.1.0 (当前版本 / current)
 - ✅ **SDK 升级 SDK upgrade**: `@modelcontextprotocol/sdk` 0.5.0 → 1.32.2，兼容新版 MCP 客户端 / compatible with newer MCP clients
 - ✅ **ESM 化 ESM**: `"type": "module"` + `import.meta.url` 路径解析 / path resolution
@@ -696,7 +713,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"tdd","argu
 - ✅ **兼容性 Compatibility**: 保持对v1.0工具系统的完整向后兼容 / full backward compatibility with the v1.0 tool system
 
 ### 测试状态 | Test status
-- **单元测试 Unit tests**: 134个通过 ✅（含 23 个迁移守卫测试 / incl. 23 migration-guard tests）
+- **单元测试 Unit tests**: 168个通过 ✅（含嵌套守卫与诚实性回归用例 / incl. nested-guard and honesty regression tests）
 - **集成测试 Integration tests**: 9个场景全部通过 ✅（SDK 1.32.2 实测 / verified against SDK 1.32.2）  
 - **构建状态 Build**: 无错误 ✅ / no errors
 - **兼容性 Compatibility**: 新旧工具系统都正常工作 ✅ / both tool systems work
