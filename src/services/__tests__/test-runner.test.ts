@@ -377,8 +377,13 @@ describe('TestRunnerService', () => {
         throw new Error('ENOENT');
       }) as any;
 
+      // 新鲜度校验：结果文件 mtime 晚于本次运行启动时间（runStartedAt=0）
+      mockFs.promises.stat = jest.fn().mockResolvedValue({
+        mtimeMs: Date.now(),
+      }) as any;
+
       const runnerAny = testRunner as any;
-      const result = await runnerAny.parseJsonResults('jest', '/valid/project');
+      const result = await runnerAny.parseJsonResults('jest', '/valid/project', 0);
 
       expect(result).not.toBeNull();
       expect(result.suites).toHaveLength(1);
@@ -397,7 +402,7 @@ describe('TestRunnerService', () => {
       }) as any;
 
       const runnerAny = testRunner as any;
-      const result = await runnerAny.parseJsonResults('jest', '/valid/project');
+      const result = await runnerAny.parseJsonResults('jest', '/valid/project', 0);
 
       // projectPath 无文件 → null（由调用方回退文本解析），绝不误读 cwd 的陈旧文件
       expect(result).toBeNull();

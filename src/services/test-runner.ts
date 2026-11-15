@@ -66,13 +66,14 @@ export class TestRunnerService {
       });
       const endTime = Date.now();
 
-      // Parse test results（解析走纯核心层）
+      // Parse test results（解析走纯核心层；runStartedAt 用于结果文件新鲜度校验）
       return this.parseTestResults(
         stdout,
         stderr,
         framework,
         endTime - startTime,
         projectPath,
+        startTime,
       );
     } catch (error: any) {
       return this.handleTestError(error, testFramework);
@@ -200,9 +201,10 @@ export class TestRunnerService {
     framework: any,
     duration: number,
     projectPath: string,
+    runStartedAt: number,
   ): Promise<TestResults> {
     try {
-      const jsonResults = await this.parseJsonResults(framework.key, projectPath);
+      const jsonResults = await this.parseJsonResults(framework.key, projectPath, runStartedAt);
       if (jsonResults) {
         return jsonResults;
       }
@@ -216,6 +218,7 @@ export class TestRunnerService {
   private async parseJsonResults(
     frameworkKey: string,
     projectPath: string,
+    runStartedAt: number,
   ): Promise<TestResults | null> {
     const jsonFiles = [
       'test-results.json',
@@ -227,7 +230,16 @@ export class TestRunnerService {
     // 相对路径会落到服务器进程 cwd，读到陈旧/无关文件（诚实性缺陷）
     for (const fileName of jsonFiles) {
       try {
-        const content = await fs.readFile(path.join(projectPath, fileName), 'utf8');
+        const filePath = path.join(projectPath, fileName);
+        // 新鲜度校验：仅当文件 mtime 晚于本次进程启动时间才采信。
+        // 本次运行失败未写文件时，旧文件会被误当本次结果（诚实性缺陷）
+        const stats = await fs.stat(filePath);
+        // mtime 缺失（异常文件系统/占位 stat）同样视为不可信
+        if (typeof stats.mtimeMs !== 'number' || stats.mtimeMs <= runStartedAt) {
+          continue;
+        }
+
+        const content = await fs.readFile(filePath, 'utf8');
 
         if (fileName.endsWith('.json')) {
           const data = JSON.parse(content);
@@ -247,6 +259,8 @@ export class TestRunnerService {
     switch (frameworkKey) {
       case 'jest':
         return parsers.parseJestResults(data);
+      case 'vitest':
+        return parsers.parseVitestResults(data);
       case 'mocha':
         return parsers.parseMochaResults(data);
       case 'pytest':
