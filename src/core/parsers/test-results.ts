@@ -242,17 +242,97 @@ export function parsePytestResults(data: any): TestResults {
   };
 }
 
+// ---------- vitest ----------
+
+export function mapVitestStatus(status: string): 'passed' | 'failed' | 'skipped' {
+  switch (status) {
+    case 'pass': return 'passed';
+    case 'fail': return 'failed';
+    // skip 与 todo 均视为未执行用例
+    case 'skip':
+    case 'todo':
+    case 'skipped': return 'skipped';
+    default: return 'failed';
+  }
+}
+
+export function parseVitestResults(data: any): TestResults {
+  const suites: TestSuiteResult[] = [];
+  let totalDuration = 0;
+
+  for (const testResult of data.testResults || []) {
+    const tests: TestResult[] = [];
+
+    for (const assertionResult of testResult.assertionResults || []) {
+      tests.push({
+        name: assertionResult.title || assertionResult.fullName || 'unknown',
+        status: mapVitestStatus(assertionResult.status),
+        // vitest 的 assertion 级无 duration 字段，用 0 占位（suite 层有耗时）
+        duration: typeof assertionResult.duration === 'number' ? assertionResult.duration : 0,
+        error: assertionResult.failureMessages?.length
+          ? assertionResult.failureMessages.join('\n')
+          : undefined,
+      });
+    }
+
+    const duration = typeof testResult.duration === 'number'
+      ? testResult.duration
+      : 0;
+    const suite: TestSuiteResult = {
+      name: testResult.name || 'unknown',
+      tests,
+      summary: {
+        total: tests.length,
+        passed: tests.filter(t => t.status === 'passed').length,
+        failed: tests.filter(t => t.status === 'failed').length,
+        skipped: tests.filter(t => t.status === 'skipped').length,
+        duration,
+      },
+    };
+
+    suites.push(suite);
+    totalDuration += duration;
+  }
+
+  const suiteTotals = suites.reduce(
+    (acc, s) => ({
+      total: acc.total + s.summary.total,
+      passed: acc.passed + s.summary.passed,
+      failed: acc.failed + s.summary.failed,
+      skipped: acc.skipped + s.summary.skipped,
+    }),
+    { total: 0, passed: 0, failed: 0, skipped: 0 },
+  );
+
+  return {
+    framework: 'vitest',
+    suites,
+    overall: {
+      // 顶层 num* 为 vitest 官方计数，优先采信；缺失时按 suite 汇总兜底
+      total: typeof data.numTotalTests === 'number' ? data.numTotalTests : suiteTotals.total,
+      passed: typeof data.numPassedTests === 'number' ? data.numPassedTests : suiteTotals.passed,
+      failed: typeof data.numFailedTests === 'number' ? data.numFailedTests : suiteTotals.failed,
+      skipped: (typeof data.numPendingTests === 'number' ? data.numPendingTests : 0)
+        + (typeof data.numTodoTests === 'number' ? data.numTodoTests : 0),
+      duration: totalDuration,
+    },
+    timestamp: new Date(),
+  };
+}
+
 // ---------- generic / text / xml ----------
 
 export function parseGenericJsonResults(): TestResults {
+  // 诚实性：读到 JSON 文件但没有该框架的专用解析器时，
+  // 返回显式"无法解析"占位，绝不伪造通过状态或与输入无关的计数
   return {
     framework: 'generic',
     suites: [{
-      name: 'Test Suite',
-      tests: [{ name: 'Generic Test', status: 'passed', duration: 0 }],
-      summary: { total: 1, passed: 1, failed: 0, skipped: 0, duration: 0 },
+      name: '无法解析的结构化结果（该框架暂无专用 JSON 解析器）',
+      tests: [],
+      summary: { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 },
     }],
-    overall: { total: 1, passed: 1, failed: 0, skipped: 0, duration: 0 },
+    overall: { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 },
     timestamp: new Date(),
   };
 }
