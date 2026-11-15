@@ -11,6 +11,8 @@ openspec list                          # 查看进行中的变更
 openspec validate --all                # 机器校验 specs 与 changes（质量门之一）
 ```
 
+> 若本机无 `openspec` 命令：真包是 `@fission-ai/openspec`（npm 上的 `openspec` 是无关占位包），可用 `pnpm dlx @fission-ai/openspec <cmd>` 运行。
+
 **流程**：`/opsx:explore`（探索）→ `/opsx:propose`（提案：proposal/specs/design/tasks 四件套）→ `/opsx:apply`（逐任务实施，按功能分步提交）→ `/opsx:archive`（规格合入 `openspec/specs/`，变更移入 `openspec/changes/archive/`）。
 
 - 任何非平凡改动都必须走 openspec 变更流程；规格用中文书写，结构标题与 SHALL 关键词保持英文
@@ -19,7 +21,7 @@ openspec validate --all                # 机器校验 specs 与 changes（质量
 ## 质量门（每次提交前全部通过）
 
 ```bash
-npm test                    # 单元测试（当前 168 个）
+npm test                    # 单元测试（当前 202 个）
 npm run lint                # ESLint 9（0 error；存量 warning 为已记录技术债）
 npm run build               # tsc，零错误
 ./integration-test.sh       # 9 个 stdio 集成场景（需本机 npm 与 node）
@@ -41,15 +43,18 @@ CI（GitHub Actions）在 Node 20/24 上执行 build + test + lint。
 - 服务代码派生测试/覆盖率子进程必须统一走 `src/services/execution-guard.ts`：注入 `TDD_MCP_NESTED_RUN` 嵌套标记 + `NODE_OPTIONS=--max-old-space-size=<MB>`（默认 1024，可用 `TDD_MCP_CHILD_MEMORY_LIMIT_MB` 覆盖），并在 spawn 前用 `isNestedExecution()` 拒绝嵌套执行——**新增任何 spawn 点都必须接入该守卫**
 - 后台运行测试/构建时同样适用上述规则；用管道接 `tail` 会掩盖真实退出码，判断成败以 `$?` 或 `PIPESTATUS` 为准
 
-## 架构速览
+## 架构速览（V3 分层）
 
-- **入口**：`src/server.ts` → `dist/server.js`（唯一入口，bin: `tdd-mcp-server`）
-- **双工具系统**：`USE_NEW_TOOLS=true` → 3 主工具 + 子命令（`src/handlers/new-tools.ts`）；`false` → v1 15 工具（`src/handlers/tools.ts`）。两套共用 `src/services/` 核心逻辑
-- **v2 工具必须真实调用 service 并返回真实结果**（Evidence over Claims，见 `skills/tdd-workflow/SKILL.md`），禁止返回与输入无关的固定字符串
+- **入口**：`src/server.ts` → `dist/server.js`（唯一入口，bin: `tdd-mcp-server`）；对象图由 `src/composition-root.ts` 统一构建注入，`server.ts` 只做装配
+- **纯核心层 `src/core/`**：解析器（jest/mocha/pytest/**vitest**/text/xml/generic）、相似度、分析——纯函数、零 IO、零 mock 可测；解析器文件禁含 `import.meta`
+- **端口与适配器**：`src/core/ports.ts` 定义 `CommandExecutor` 与存储仓储接口；`src/adapters/` 提供 `GuardedCommandExecutor`（**唯一 spawn 网关**，`child_process` 只允许出现在 adapters 与 execution-guard，架构守卫测试锁定）与 `InMemoryStorage`（测试 fake）
+- **命令注册表**：`src/commands/registry.ts` 是 v2 子命令的单一事实来源（zod schema + inputSchema + handler），`new-tools.ts` 是其薄投影
+- **双工具系统**：`USE_NEW_TOOLS=true` → 3 主工具 + 子命令；`false` → v1 15 工具（兼容层，调同一批 service）
+- **诚实性约束**：工具必须真实调用 service 并返回真实结果（Evidence over Claims，见 `skills/tdd-workflow/SKILL.md`）；测试结果文件须通过新鲜度校验（mtime 晚于本次进程启动），未知框架不得伪造通过占位
 - **i18n**：`src/i18n.ts`，默认中文，`DEFAULT_LOCALE` 切换
 - **存储**：`~/.tdd-flow/projects/<id>/*.jsonl`，格式变更需向后兼容
 - **技能资产**：`skills/<name>/SKILL.md`（YAML frontmatter），prompts 优先从此加载，回退 `templates/`
-- **ESM**：包声明 `"type": "module"`；源码中禁止裸用 `__dirname`，用 `import.meta.url` 派生（注意：含 `import.meta` 的文件无法被 jest CJS 转换测试，纯逻辑抽到无 ESM 语法的模块）
+- **ESM**：包声明 `"type": "module"`；源码中禁止裸用 `__dirname`，用 `import.meta.url` 派生（含 `import.meta` 的文件无法被 jest CJS 转换测试，纯逻辑抽到无 ESM 语法的模块）
 
 ## 提交规范
 
