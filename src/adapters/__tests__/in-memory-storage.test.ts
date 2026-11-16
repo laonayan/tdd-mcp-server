@@ -113,3 +113,29 @@ describe('InMemoryStorage（仓储 fake）', () => {
     expect(await storage.listFileAssociations('f1')).toHaveLength(0);
   });
 });
+
+describe('InMemoryStorage.listProjects（状态资源支撑）', () => {
+  it('从各实体的 projectId 推导去重后的项目集合', async () => {
+    const storage = new InMemoryStorage();
+    await storage.saveFeature({
+      id: 'f1', name: 'n', description: '', acceptanceCriteria: [], status: 'planning',
+      projectId: 'proj-a', priority: 'medium', tags: [], createdAt: new Date(), updatedAt: new Date(),
+    } as never);
+    await storage.saveTDDSession({
+      id: 's1', featureId: 'f1', projectId: 'proj-b', stage: 1,
+      startedAt: new Date(), updatedAt: new Date(), cycleCount: 0,
+    } as never);
+    await storage.registerTestMethod({
+      id: 'm1', featureId: 'f1', projectId: 'proj-a', name: 't', filePath: 'x',
+      status: 'pending', framework: 'jest', createdAt: new Date(),
+    } as never);
+
+    const projects = await storage.listProjects();
+    expect(projects.sort()).toEqual(['proj-a', 'proj-b']);
+  });
+
+  it('空存储返回空数组', async () => {
+    const storage = new InMemoryStorage();
+    expect(await storage.listProjects()).toEqual([]);
+  });
+});

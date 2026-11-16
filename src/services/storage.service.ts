@@ -355,8 +355,8 @@ export class StorageService implements IStorageService, StorageRepository {
     return false;
   }
 
-  // Helper method to list all projects
-  private async listProjects(): Promise<string[]> {
+  // 枚举全部项目（状态资源汇聚用；从存储目录推导）
+  async listProjects(): Promise<string[]> {
     if (!(await fs.pathExists(this.baseStoragePath))) {
       return [];
     }

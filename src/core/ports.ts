@@ -67,6 +67,12 @@ export interface FileAssociationRepository {
 }
 
 /** 存储总仓储（四个子仓储的聚合根） */
+/** 跨项目枚举（状态资源汇聚用）：各仓储实现的并集 */
+export interface ProjectEnumeration {
+  listProjects(): Promise<string[]>;
+}
+
 export interface StorageRepository
-  extends FeatureRepository, SessionRepository, TestMethodRepository, FileAssociationRepository {
+  extends FeatureRepository, SessionRepository, TestMethodRepository, FileAssociationRepository,
+    ProjectEnumeration {
 }

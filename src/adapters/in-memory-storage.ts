@@ -22,6 +22,14 @@ export class InMemoryStorage implements StorageRepository {
   private methods = new Map<string, TestMethod>(); // key: methodId
   private associations = new Map<string, FileAssociation>(); // key: associationId
 
+  async listProjects(): Promise<string[]> {
+    const ids = new Set<string>();
+    for (const f of this.features.values()) ids.add(f.projectId);
+    for (const s of this.sessions.values()) ids.add(s.projectId);
+    for (const m of this.methods.values()) ids.add(m.projectId);
+    return [...ids];
+  }
+
   // ---------- Feature ----------
 
   async saveFeature(feature: Feature): Promise<void> {
