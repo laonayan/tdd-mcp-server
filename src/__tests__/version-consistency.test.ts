@@ -12,7 +12,7 @@ const repoRoot = path.resolve(moduleDir, '..', '..');
 
 const EXPECTED_VERSION = '2.1.0';
 
-async function readPackageJson(): Promise<any> {
+async function readPackageJson(): Promise<{ version: string; type: string; engines: { node: string }; dependencies: Record<string, string>; bin: Record<string, string> }> {
   return JSON.parse(await fs.readFile(path.join(repoRoot, 'package.json'), 'utf8'));
 }
 

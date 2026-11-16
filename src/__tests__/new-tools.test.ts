@@ -299,7 +299,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
       expect(featureService.createFeature).toHaveBeenCalledWith(
         expect.objectContaining({ name: '密码重置', acceptanceCriteria: ['可通过邮箱重置密码'] }),
       );
-      const text = resultText(result as any);
+      const text = resultText(result as unknown as { content: { type: string; text: string }[] });
       expect(text).toContain('feature-uuid-1');
       expect(text).toContain('"planning"');
     });
@@ -315,7 +315,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
       });
 
       expect(result.isError).toBe(true);
-      expect(resultText(result as any)).toContain('at least one acceptance criteria');
+      expect(resultText(result as unknown as { content: { type: string; text: string }[] })).toContain('at least one acceptance criteria');
     });
 
     it('find 必须返回真实相似度结果（含理由），空结果如实返回', async () => {
@@ -337,7 +337,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
         expect.any(String),
         undefined,
       );
-      const text = resultText(result as any);
+      const text = resultText(result as unknown as { content: { type: string; text: string }[] });
       expect(text).toContain('0.75');
       expect(text).toContain('Name similarity');
 
@@ -348,7 +348,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
         params: { name: 'feature', arguments: { command: 'find', query: '不存在的功能' } },
       });
       expect(empty.isError).toBeFalsy();
-      expect(resultText(empty as any)).toContain('No similar features');
+      expect(resultText(empty as unknown as { content: { type: string; text: string }[] })).toContain('No similar features');
     });
 
     it('update 必须真实更新并返回更新后对象；目标不存在时如实报错', async () => {
@@ -364,7 +364,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
       expect(featureService.updateFeatureStatus).toHaveBeenCalledWith(
         expect.objectContaining({ featureId: 'f-1', status: 'in_progress' }),
       );
-      expect(resultText(result as any)).toContain('in_progress');
+      expect(resultText(result as unknown as { content: { type: string; text: string }[] })).toContain('in_progress');
 
       featureService.updateFeatureStatus.mockRejectedValue(new Error('Feature not found: f-404'));
       const notFound = await toolsHandler.callTool({
@@ -372,7 +372,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
         params: { name: 'feature', arguments: { command: 'update', featureId: 'f-404', status: 'completed' } },
       });
       expect(notFound.isError).toBe(true);
-      expect(resultText(notFound as any)).toContain('Feature not found: f-404');
+      expect(resultText(notFound as unknown as { content: { type: string; text: string }[] })).toContain('Feature not found: f-404');
     });
 
     it('link 必须真实关联文件并返回关联对象', async () => {
@@ -391,7 +391,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
       expect(featureService.linkFeatureFiles).toHaveBeenCalledWith(
         expect.objectContaining({ featureId: 'f-1', filePaths: ['./src/login.ts'] }),
       );
-      expect(resultText(result as any)).toContain('assoc-1');
+      expect(resultText(result as unknown as { content: { type: string; text: string }[] })).toContain('assoc-1');
     });
   });
 
@@ -421,7 +421,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
           status: 'pending',
         }),
       );
-      const text = resultText(result as any);
+      const text = resultText(result as unknown as { content: { type: string; text: string }[] });
       expect(text).toMatch(/"id":\s*"test-/);
       expect(text).toContain('"pending"');
     });
@@ -442,7 +442,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
       });
 
       expect(storageService.updateTestExecutionResult).toHaveBeenCalledWith('m-1', { duration: 120, passed: true });
-      const text = resultText(result as any);
+      const text = resultText(result as unknown as { content: { type: string; text: string }[] });
       expect(text).toContain('"passed"');
 
       storageService.updateTestExecutionResult.mockResolvedValue(false);
@@ -454,7 +454,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
         },
       });
       expect(failed.isError).toBe(true);
-      expect(resultText(failed as any)).toContain('m-404');
+      expect(resultText(failed as unknown as { content: { type: string; text: string }[] })).toContain('m-404');
     });
 
     it('status 必须真实更新并回读', async () => {
@@ -472,7 +472,7 @@ describe('NewToolsHandler - feature/tracking 真实接线（诚实性回归）',
       });
 
       expect(storageService.updateTestMethodStatus).toHaveBeenCalledWith('m-2', 'skipped');
-      expect(resultText(result as any)).toContain('"skipped"');
+      expect(resultText(result as unknown as { content: { type: string; text: string }[] })).toContain('"skipped"');
     });
   });
 });

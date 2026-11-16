@@ -1,6 +1,38 @@
 import { CodeGeneratorService } from '../code-generator.js';
 import { SupportedLanguage } from '../../types/tdd.js';
 
+/** 测试用：与 code-generator.ts 内部 TestRequirement/参数结构保持一致的最小结构类型 */
+interface TestRequirementLike {
+  className: string;
+  testName: string;
+  methodCalls: string[];
+  expectations: string[];
+  shouldThrow: boolean;
+}
+
+interface CodeGenerationParamsLike {
+  testCode: string;
+  language: SupportedLanguage;
+  implementationStyle: 'minimal' | 'comprehensive' | 'production-ready';
+}
+
+/** 暴露私有方法供单元测试直接调用的类型视图 */
+interface CodeGeneratorInternals {
+  parseTestRequirements(testCode: string, language: SupportedLanguage): TestRequirementLike[];
+  parseJavaScriptTests(testCode: string): TestRequirementLike[];
+  generateCode(requirements: TestRequirementLike[], params: CodeGenerationParamsLike): string;
+  generateJavaScriptMethod(
+    methodName: string,
+    requirements: TestRequirementLike[],
+    params: CodeGenerationParamsLike,
+  ): string;
+  extractMethodCalls(testBlock: string): string[];
+  extractExpectations(testBlock: string): string[];
+  extractUniqueMethods(requirements: TestRequirementLike[]): string[];
+  extractTestNames(testCode: string): string[];
+  generateImports(requirements: TestRequirementLike[], language: SupportedLanguage): string[];
+}
+
 describe('CodeGeneratorService', () => {
   let codeGenerator: CodeGeneratorService;
 
@@ -81,7 +113,7 @@ describe('CodeGeneratorService', () => {
         });
       `;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const requirements = codeGeneratorAny.parseTestRequirements(testCode, SupportedLanguage.TYPESCRIPT);
 
       expect(requirements).toHaveLength(1);
@@ -98,7 +130,7 @@ describe('CodeGeneratorService', () => {
             assert user is not None
       `;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const requirements = codeGeneratorAny.parseTestRequirements(testCode, SupportedLanguage.PYTHON);
 
       expect(requirements).toHaveLength(1);
@@ -115,7 +147,7 @@ describe('CodeGeneratorService', () => {
         });
       });`;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const requirements = codeGeneratorAny.parseJavaScriptTests(testCode);
 
       expect(requirements[0].className).toBe('Calculator');
@@ -128,7 +160,7 @@ describe('CodeGeneratorService', () => {
         });
       });`;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const requirements = codeGeneratorAny.parseJavaScriptTests(testCode);
 
       expect(requirements[0].testName).toBe('should multiply numbers');
@@ -141,7 +173,7 @@ describe('CodeGeneratorService', () => {
         });
       });`;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const requirements = codeGeneratorAny.parseJavaScriptTests(testCode);
 
       expect(requirements[0].shouldThrow).toBe(true);
@@ -164,7 +196,7 @@ describe('CodeGeneratorService', () => {
         implementationStyle: 'minimal' as const,
       };
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const code = codeGeneratorAny.generateCode(requirements, params);
 
       expect(code).toContain('export class TestClass');
@@ -186,7 +218,7 @@ describe('CodeGeneratorService', () => {
         implementationStyle: 'minimal' as const,
       };
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const code = codeGeneratorAny.generateCode(requirements, params);
 
       expect(code).toContain('class TestClass');
@@ -210,7 +242,7 @@ describe('CodeGeneratorService', () => {
         implementationStyle: 'minimal' as const,
       };
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const method = codeGeneratorAny.generateJavaScriptMethod('throwMethod', requirements, params);
 
       expect(method).toContain('throw new Error');
@@ -231,7 +263,7 @@ describe('CodeGeneratorService', () => {
         implementationStyle: 'minimal' as const,
       };
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const method = codeGeneratorAny.generateJavaScriptMethod('normalMethod', requirements, params);
 
       expect(method).toContain('return null');
@@ -247,7 +279,7 @@ describe('CodeGeneratorService', () => {
         expect(obj.method3()).toBe(true);
       `;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const methods = codeGeneratorAny.extractMethodCalls(testBlock);
 
       expect(methods).toContain('method1');
@@ -264,7 +296,7 @@ describe('CodeGeneratorService', () => {
         expect(() => service.fail()).toThrow();
       `;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const expectations = codeGeneratorAny.extractExpectations(testBlock);
 
       expect(expectations).toContain('toBe');
@@ -292,7 +324,7 @@ describe('CodeGeneratorService', () => {
         },
       ];
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const uniqueMethods = codeGeneratorAny.extractUniqueMethods(requirements);
 
       expect(uniqueMethods).toHaveLength(3);
@@ -309,7 +341,7 @@ describe('CodeGeneratorService', () => {
         it('should handle errors', () => {});
       `;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const testNames = codeGeneratorAny.extractTestNames(testCode);
 
       expect(testNames).toContain('should work correctly');
@@ -324,7 +356,7 @@ describe('CodeGeneratorService', () => {
             pass
       `;
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const testNames = codeGeneratorAny.extractTestNames(testCode);
 
       expect(testNames).toContain('test_functionality');
@@ -342,21 +374,21 @@ describe('CodeGeneratorService', () => {
         shouldThrow: true,
       }];
 
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const imports = codeGeneratorAny.generateImports(requirements, SupportedLanguage.PYTHON);
 
       expect(imports).toContain('from typing import Optional, Any');
     });
 
     it('should generate Java imports', () => {
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const imports = codeGeneratorAny.generateImports([], SupportedLanguage.JAVA);
 
       expect(imports).toContain('import java.util.*;');
     });
 
     it('should generate C# imports', () => {
-      const codeGeneratorAny = codeGenerator as any;
+      const codeGeneratorAny = codeGenerator as unknown as CodeGeneratorInternals;
       const imports = codeGeneratorAny.generateImports([], SupportedLanguage.CSHARP);
 
       expect(imports).toContain('using System;');

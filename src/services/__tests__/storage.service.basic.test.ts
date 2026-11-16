@@ -53,7 +53,7 @@ describe('StorageService - Basic Tests', () => {
       const invalidFeature = {
         name: 'Test Feature',
         // Missing required fields
-      } as any;
+      } as unknown as Feature;
 
       // Act & Assert
       await expect(storageService.saveFeature(invalidFeature))
@@ -129,8 +129,8 @@ describe('StorageService - Basic Tests', () => {
       readCounts = new Map();
 
       mockFs.readdir.mockResolvedValue([
-        { name: 'project-one', isDirectory: () => true } as any,
-        { name: 'project-two', isDirectory: () => true } as any,
+        { name: 'project-one', isDirectory: () => true } as unknown as import('fs').Dirent,
+        { name: 'project-two', isDirectory: () => true } as unknown as import('fs').Dirent,
       ]);
       mockFs.pathExists.mockResolvedValue(true);
       const readImpl = async (p: unknown): Promise<string> => {
@@ -140,11 +140,11 @@ describe('StorageService - Basic Tests', () => {
         if (content === undefined) throw new Error('ENOENT');
         return content;
       };
-      mockFs.readFile.mockImplementation(readImpl as any);
+      mockFs.readFile.mockImplementation(readImpl as unknown as typeof mockFs.readFile);
       const writeImpl = async (p: unknown, content: unknown): Promise<void> => {
         files.set(String(p), String(content));
       };
-      mockFs.writeFile.mockImplementation(writeImpl as any);
+      mockFs.writeFile.mockImplementation(writeImpl as unknown as typeof mockFs.writeFile);
     });
 
     it('命中首个项目即返回：不读其他项目文件（逐项目早退），记录完整', async () => {

@@ -25,12 +25,40 @@ const mockExec = exec as jest.MockedFunction<typeof exec>;
 const mockPromisify = promisify as jest.MockedFunction<typeof promisify>;
 const mockFs = fs as jest.Mocked<typeof fs>;
 
+/** 结构化私有方法视图（替代 as any，仅用于类型标注） */
+interface CoverageAnalyzerInternals {
+  validateProjectPath(projectPath: string): Promise<void>;
+  buildCoverageCommand(testCommand: string, outputFormat: string): string;
+  buildJestCoverageCommand(testCommand: string, outputFormat: string): string;
+  buildPytestCoverageCommand(testCommand: string, outputFormat: string): string;
+  parseXmlCoverage(xmlContent: string): { overall: { lines: number; branches: number } };
+  parseLcovCoverage(lcovContent: string): {
+    overall: { lines: number; functions: number; branches: number };
+  };
+  parseTextCoverage(textContent: string): { overall: { lines: number; statements: number } };
+  calculatePercentage(covered: number, total: number): number;
+  generateCoverageReport(
+    coverageData: {
+      overall: { lines: number; functions: number; branches: number; statements: number };
+      files: Record<string, Record<string, { total: number; covered: number }>>;
+    },
+    thresholds?: { lines: number; functions: number; branches: number; statements: number },
+  ): {
+    overall: { lines: number; functions: number };
+    threshold?: { lines: number };
+    files: unknown[];
+    timestamp: Date;
+  };
+}
+
 describe('CoverageAnalyzerService', () => {
   let coverageAnalyzer: CoverageAnalyzerService;
   let mockExecAsync: jest.Mock;
+  let internals: CoverageAnalyzerInternals;
 
   beforeEach(() => {
     coverageAnalyzer = new CoverageAnalyzerService();
+    internals = coverageAnalyzer as unknown as CoverageAnalyzerInternals;
     mockExecAsync = jest.fn();
     mockPromisify.mockReturnValue(mockExecAsync);
     jest.clearAllMocks();
@@ -49,7 +77,7 @@ describe('CoverageAnalyzerService', () => {
         testCommand: 'jest',
       };
 
-      jest.spyOn(coverageAnalyzer as any, 'validateProjectPath').mockRejectedValue(
+      jest.spyOn(internals, 'validateProjectPath').mockRejectedValue(
         new Error('Coverage analysis failed: Invalid project path: /invalid/path'),
       );
 
@@ -60,24 +88,21 @@ describe('CoverageAnalyzerService', () => {
 
   describe('buildCoverageCommand', () => {
     it('should build Jest coverage command correctly', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildCoverageCommand('jest', 'json');
+      const command = internals.buildCoverageCommand('jest', 'json');
       
       expect(command).toContain('--coverage');
       expect(command).toContain('--coverageReporters=json');
     });
 
     it('should build pytest coverage command correctly', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildCoverageCommand('pytest', 'html');
+      const command = internals.buildCoverageCommand('pytest', 'html');
       
       expect(command).toContain('--cov=.');
       expect(command).toContain('--cov-report=html');
     });
 
     it('should build generic coverage command for unknown frameworks', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildCoverageCommand('unknown-test', 'json');
+      const command = internals.buildCoverageCommand('unknown-test', 'json');
       
       expect(command).toBe('unknown-test --coverage');
     });
@@ -85,16 +110,14 @@ describe('CoverageAnalyzerService', () => {
 
   describe('buildJestCoverageCommand', () => {
     it('should add JSON reporters', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildJestCoverageCommand('jest', 'json');
+      const command = internals.buildJestCoverageCommand('jest', 'json');
       
       expect(command).toContain('--coverageReporters=json-summary');
       expect(command).toContain('--coverageReporters=json');
     });
 
     it('should add HTML reporter', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildJestCoverageCommand('jest', 'html');
+      const command = internals.buildJestCoverageCommand('jest', 'html');
       
       expect(command).toContain('--coverageReporters=html');
     });
@@ -102,16 +125,14 @@ describe('CoverageAnalyzerService', () => {
 
   describe('buildPytestCoverageCommand', () => {
     it('should configure pytest with coverage', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildPytestCoverageCommand('pytest', 'lcov');
+      const command = internals.buildPytestCoverageCommand('pytest', 'lcov');
       
       expect(command).toContain('--cov=.');
       expect(command).toContain('--cov-report=lcov');
     });
 
     it('should use term-missing for text output', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const command = coverageAnalyzerAny.buildPytestCoverageCommand('pytest', 'text');
+      const command = internals.buildPytestCoverageCommand('pytest', 'text');
       
       expect(command).toContain('--cov-report=term-missing');
     });
@@ -131,8 +152,7 @@ describe('CoverageAnalyzerService', () => {
           </packages>
         </coverage>`;
 
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const result = coverageAnalyzerAny.parseXmlCoverage(xmlContent);
+      const result = internals.parseXmlCoverage(xmlContent);
 
       expect(result.overall.lines).toBe(85);
       expect(result.overall.branches).toBe(80);
@@ -151,8 +171,7 @@ BRF:4
 BRH:3
 end_of_record`;
 
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const result = coverageAnalyzerAny.parseLcovCoverage(lcovContent);
+      const result = internals.parseLcovCoverage(lcovContent);
 
       expect(result.overall.lines).toBe(80); // 8/10 = 80%
       expect(result.overall.functions).toBe(100); // 1/1 = 100%
@@ -164,8 +183,7 @@ end_of_record`;
     it('should extract percentage from text coverage', () => {
       const textContent = 'Total coverage: 85.5%';
 
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const result = coverageAnalyzerAny.parseTextCoverage(textContent);
+      const result = internals.parseTextCoverage(textContent);
 
       expect(result.overall.lines).toBe(85.5);
       expect(result.overall.statements).toBe(85.5);
@@ -174,11 +192,9 @@ end_of_record`;
 
   describe('calculatePercentage', () => {
     it('should calculate percentage correctly', () => {
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      
-      expect(coverageAnalyzerAny.calculatePercentage(8, 10)).toBe(80);
-      expect(coverageAnalyzerAny.calculatePercentage(0, 0)).toBe(0);
-      expect(coverageAnalyzerAny.calculatePercentage(5, 3)).toBe(166.67);
+      expect(internals.calculatePercentage(8, 10)).toBe(80);
+      expect(internals.calculatePercentage(0, 0)).toBe(0);
+      expect(internals.calculatePercentage(5, 3)).toBe(166.67);
     });
   });
 
@@ -204,8 +220,7 @@ end_of_record`;
 
       const thresholds = { lines: 80, functions: 85, branches: 75, statements: 80 };
 
-      const coverageAnalyzerAny = coverageAnalyzer as any;
-      const report = coverageAnalyzerAny.generateCoverageReport(coverageData, thresholds);
+      const report = internals.generateCoverageReport(coverageData, thresholds);
 
       expect(report.overall.lines).toBe(85);
       expect(report.overall.functions).toBe(90);

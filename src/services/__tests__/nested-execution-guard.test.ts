@@ -13,6 +13,11 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+/** 暴露私有方法 runQuickTests 供单元测试直接调用的类型视图 */
+interface CycleValidatorInternals {
+  runQuickTests(projectPath: string): Promise<{ passed: number; failed: number }>;
+}
+
 // 复现路径（系统假死根因）：单元测试 -> tdd 工具 -> validateCycle ->
 // runQuickTests() -> 再 spawn `npm test`/`jest` -> 套件被再次收集执行 ->
 // 无限递归；每层固定派生 worker，进程树指数膨胀直至整台设备假死。
@@ -87,7 +92,7 @@ describe('嵌套执行守卫（递归进程爆炸回归）', () => {
     setNested(true);
     mockExecAsync.mockResolvedValue({ stdout: '1 passed', stderr: '' });
 
-    const result = await (validator as any).runQuickTests(tmpDir);
+    const result = await (validator as unknown as CycleValidatorInternals).runQuickTests(tmpDir);
 
     // 降级返回全零（不谎报），但绝不派生进程
     expect(result).toEqual({ passed: 0, failed: 0 });
@@ -147,7 +152,7 @@ describe('嵌套执行守卫（递归进程爆炸回归）', () => {
     setNested(false);
     mockExecAsync.mockResolvedValue({ stdout: '5 passed, 0 failed', stderr: '' });
 
-    const result = await (validator as any).runQuickTests(tmpDir);
+    const result = await (validator as unknown as CycleValidatorInternals).runQuickTests(tmpDir);
 
     expect(result).toEqual({ passed: 5, failed: 0 });
     expect(mockExecAsync).toHaveBeenCalledTimes(1);

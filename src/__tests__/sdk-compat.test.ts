@@ -29,8 +29,8 @@ describe('SDK 1.x compatibility', () => {
 
     it.each(schemas)('%s should be a zod schema with .parse', (_name, schema) => {
       expect(schema).toBeDefined();
-      expect(typeof (schema as any).parse).toBe('function');
-      expect(typeof (schema as any).safeParse).toBe('function');
+      expect(typeof (schema as unknown as { parse: unknown; safeParse: unknown }).parse).toBe('function');
+      expect(typeof (schema as unknown as { parse: unknown; safeParse: unknown }).safeParse).toBe('function');
     });
 
     it('CallToolRequestSchema parses a valid tools/call request', () => {

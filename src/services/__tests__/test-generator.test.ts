@@ -1,5 +1,26 @@
 import { TestGeneratorService } from '../test-generator.js';
-import { SupportedLanguage, TestType } from '../../types/tdd.js';
+import { SupportedLanguage, TestType, GeneratedTest } from '../../types/tdd.js';
+
+/** 与 test-generator.ts 内部 TestGenerationParams 保持一致的最小结构类型 */
+interface TestGenerationParamsLike {
+  requirements: string;
+  language: SupportedLanguage;
+  framework: string;
+  testType: TestType;
+}
+
+/** 暴露私有方法供单元测试直接调用的类型视图 */
+interface TestGeneratorInternals {
+  parseRequirements(requirements: string): string[];
+  generateHappyPathTest(behavior: string, params: TestGenerationParamsLike): Promise<GeneratedTest>;
+  generateEdgeCaseTests(behavior: string, params: TestGenerationParamsLike): Promise<GeneratedTest[]>;
+  generateErrorCaseTests(behavior: string, params: TestGenerationParamsLike): Promise<GeneratedTest[]>;
+  extractClassName(behavior: string): string;
+  extractMethodName(behavior: string): string;
+  identifyEdgeCases(behavior: string): string[];
+  identifyErrorCases(behavior: string): string[];
+  estimateCoverage(tests: GeneratedTest[]): number;
+}
 
 describe('TestGeneratorService', () => {
   let testGenerator: TestGeneratorService;
@@ -75,7 +96,7 @@ describe('TestGeneratorService', () => {
     it('should extract behaviors from requirements with "should" keywords', () => {
       const requirements = 'User should login. System should validate credentials. App should redirect after success.';
       
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const behaviors = testGeneratorAny.parseRequirements(requirements);
 
       expect(behaviors).toHaveLength(3);
@@ -87,7 +108,7 @@ describe('TestGeneratorService', () => {
     it('should handle requirements without specific behavior keywords', () => {
       const requirements = 'This is a basic requirement without specific patterns';
       
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const behaviors = testGeneratorAny.parseRequirements(requirements);
 
       expect(behaviors).toHaveLength(1);
@@ -105,7 +126,7 @@ describe('TestGeneratorService', () => {
         testType: TestType.UNIT,
       };
 
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const test = await testGeneratorAny.generateHappyPathTest(behavior, params);
 
       expect(test.name).toContain('test_');
@@ -127,7 +148,7 @@ describe('TestGeneratorService', () => {
         testType: TestType.UNIT,
       };
 
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const tests = await testGeneratorAny.generateEdgeCaseTests(behavior, params);
 
       expect(tests.length).toBeGreaterThan(0);
@@ -144,7 +165,7 @@ describe('TestGeneratorService', () => {
         testType: TestType.UNIT,
       };
 
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const tests = await testGeneratorAny.generateEdgeCaseTests(behavior, params);
 
       expect(tests.length).toBeGreaterThan(0);
@@ -162,7 +183,7 @@ describe('TestGeneratorService', () => {
         testType: TestType.UNIT,
       };
 
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const tests = await testGeneratorAny.generateErrorCaseTests(behavior, params);
 
       expect(tests.length).toBeGreaterThan(0);
@@ -174,7 +195,7 @@ describe('TestGeneratorService', () => {
 
   describe('extractClassName', () => {
     it('should extract meaningful class name from behavior', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       
       expect(testGeneratorAny.extractClassName('Calculator should add numbers'))
         .toBe('Calculator');
@@ -187,7 +208,7 @@ describe('TestGeneratorService', () => {
 
   describe('extractMethodName', () => {
     it('should extract meaningful method name from behavior', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       
       expect(testGeneratorAny.extractMethodName('Calculator should create new instance'))
         .toBe('create');
@@ -202,7 +223,7 @@ describe('TestGeneratorService', () => {
 
   describe('identifyEdgeCases', () => {
     it('should identify number-related edge cases', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const edgeCases = testGeneratorAny.identifyEdgeCases('Calculator should handle number operations');
 
       expect(edgeCases).toContain('zero value');
@@ -211,7 +232,7 @@ describe('TestGeneratorService', () => {
     });
 
     it('should identify string-related edge cases', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const edgeCases = testGeneratorAny.identifyEdgeCases('Parser should process string input');
 
       expect(edgeCases).toContain('empty string');
@@ -220,7 +241,7 @@ describe('TestGeneratorService', () => {
     });
 
     it('should identify array-related edge cases', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const edgeCases = testGeneratorAny.identifyEdgeCases('Processor should handle array data');
 
       expect(edgeCases).toContain('empty array');
@@ -231,7 +252,7 @@ describe('TestGeneratorService', () => {
 
   describe('identifyErrorCases', () => {
     it('should identify common error cases', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const errorCases = testGeneratorAny.identifyErrorCases('Service should process requests');
 
       expect(errorCases).toContain('null input');
@@ -240,7 +261,7 @@ describe('TestGeneratorService', () => {
     });
 
     it('should identify database-related error cases', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const errorCases = testGeneratorAny.identifyErrorCases('Repository should save data to database');
 
       expect(errorCases).toContain('connection failure');
@@ -248,7 +269,7 @@ describe('TestGeneratorService', () => {
     });
 
     it('should identify network-related error cases', () => {
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const errorCases = testGeneratorAny.identifyErrorCases('Client should call API endpoint');
 
       expect(errorCases).toContain('network error');
@@ -264,7 +285,7 @@ describe('TestGeneratorService', () => {
         { name: 'test3', description: 'error case test', code: '', imports: [] },
       ];
 
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const coverage = testGeneratorAny.estimateCoverage(tests);
 
       expect(coverage).toBeGreaterThan(50);
@@ -279,7 +300,7 @@ describe('TestGeneratorService', () => {
         imports: [],
       }));
 
-      const testGeneratorAny = testGenerator as any;
+      const testGeneratorAny = testGenerator as unknown as TestGeneratorInternals;
       const coverage = testGeneratorAny.estimateCoverage(manyTests);
 
       expect(coverage).toBeLessThanOrEqual(95);

@@ -1,4 +1,4 @@
-import { I18nService } from '../i18n.js';
+import { I18nService, type SupportedLocale } from '../i18n.js';
 
 describe('I18nService', () => {
   let i18nService: I18nService;
@@ -18,7 +18,7 @@ describe('I18nService', () => {
     });
 
     test('应该拒绝不支持的语言', () => {
-      expect(() => i18nService.setLocale('fr' as any)).toThrow('Unsupported locale: fr');
+      expect(() => i18nService.setLocale('fr' as unknown as SupportedLocale)).toThrow('Unsupported locale: fr');
     });
   });
 
@@ -80,7 +80,7 @@ describe('I18nService', () => {
     test('应该回退到默认语言', () => {
       const error = i18nService.createLocalizedError(
         'INVALID_PARAMS',
-        'fr' as any,
+        'fr' as unknown as SupportedLocale,
       );
       
       expect(error.message).toBe('Input parameter validation failed');

@@ -1,4 +1,6 @@
 import { TestRunnerService } from '../test-runner.js';
+import type { FrameworkWithKey } from '../../types/test-frameworks.js';
+import type { TestResults } from '../../types/tdd.js';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 // V3：解析逻辑已下沉纯核心层，测试直接对纯函数断言（零 mock）
@@ -24,12 +26,39 @@ jest.mock('fs', () => ({
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
+/** 结构化私有方法视图（替代 as any，仅用于类型标注） */
+interface TestRunnerInternals {
+  validateProjectPath(projectPath: string): Promise<void>;
+  getFrameworkConfig(frameworkName: string): FrameworkWithKey | null;
+  buildTestCommand(
+    framework: FrameworkWithKey,
+    params: {
+      projectPath: string;
+      testFramework: string;
+      testFiles?: string[];
+      options?: { verbose?: boolean; coverage?: boolean; parallel?: boolean };
+    },
+  ): string;
+  getVerboseFlag(frameworkKey: string): string;
+  handleTestError(
+    error: unknown,
+    framework: string,
+  ): TestResults & { suites: { tests: { error: string }[] }[] };
+  parseJsonResults(
+    frameworkKey: string,
+    projectPath: string,
+    runStartedAt: number,
+  ): Promise<{ suites: { name: string }[]; overall: { passed: number } }>;
+}
+
 describe('TestRunnerService', () => {
   let testRunner: TestRunnerService;
   let mockExecAsync: jest.Mock;
+  let internals: TestRunnerInternals;
 
   beforeEach(() => {
     testRunner = new TestRunnerService();
+    internals = testRunner as unknown as TestRunnerInternals;
     jest.clearAllMocks();
     
     // promisify 的 mock：util 模块属性不可改写且不可 spyOn。
@@ -57,9 +86,8 @@ describe('TestRunnerService', () => {
       process.env.JEST_WORKER_ID = '99'; // 模拟"正运行在 jest 内"
 
       // 本套件 mock 了 fs：让路径校验放行，确保到达守卫分支
-      const anyRunner = testRunner as any;
       jest
-        .spyOn(anyRunner, 'validateProjectPath')
+        .spyOn(internals, 'validateProjectPath')
         .mockResolvedValue(undefined);
 
       try {
@@ -68,14 +96,14 @@ describe('TestRunnerService', () => {
           testFramework: 'jest',
         };
 
-        const result: any = await testRunner.runTests(params);
+        const result = (await testRunner.runTests(params)) as TestResults & { note: string };
 
         // 守卫触发：不执行命令，返回带说明的空结果（如实标注，不谎报通过）
         expect(result.suites).toEqual([]);
         expect(result.note).toContain('recursive self-invocation guard');
         expect(result.note).toContain('Command not run');
       } finally {
-        anyRunner.validateProjectPath.mockRestore();
+        internals.validateProjectPath.mockRestore();
         if (workerId === undefined) {
           delete process.env.JEST_WORKER_ID;
         } else {
@@ -86,8 +114,8 @@ describe('TestRunnerService', () => {
 
     it('builds parallel flags with bounded workers (no --maxWorkers=auto)', () => {
       // auto 在嵌套调用时按 CPU 核数开满 worker，进程数指数增长直至死机
-      const cmd = (testRunner as any).buildTestCommand(
-        (testRunner as any).getFrameworkConfig('jest'),
+      const cmd = internals.buildTestCommand(
+        internals.getFrameworkConfig('jest') as FrameworkWithKey,
         { options: {} },
       );
       expect(cmd).toContain('--maxWorkers=2');
@@ -125,8 +153,7 @@ describe('TestRunnerService', () => {
 
   describe('getFrameworkConfig', () => {
     it('should get Jest framework config', () => {
-      const testRunnerAny = testRunner as any;
-      const config = testRunnerAny.getFrameworkConfig('jest');
+      const config = internals.getFrameworkConfig('jest');
 
       expect(config).toBeDefined();
       expect(config.name).toBe('Jest');
@@ -134,16 +161,14 @@ describe('TestRunnerService', () => {
     });
 
     it('should get framework config by name', () => {
-      const testRunnerAny = testRunner as any;
-      const config = testRunnerAny.getFrameworkConfig('JUnit 5');
+      const config = internals.getFrameworkConfig('JUnit 5');
 
       expect(config).toBeDefined();
       expect(config.name).toBe('JUnit 5');
     });
 
     it('should return null for unsupported framework', () => {
-      const testRunnerAny = testRunner as any;
-      const config = testRunnerAny.getFrameworkConfig('unknown');
+      const config = internals.getFrameworkConfig('unknown');
 
       expect(config).toBeNull();
     });
@@ -170,8 +195,7 @@ describe('TestRunnerService', () => {
         },
       };
 
-      const testRunnerAny = testRunner as any;
-      const command = testRunnerAny.buildTestCommand(framework, params);
+      const command = internals.buildTestCommand(framework, params);
 
       expect(command).toContain('--coverage');
       expect(command).toContain('--verbose');
@@ -195,8 +219,7 @@ describe('TestRunnerService', () => {
         options: { verbose: true, parallel: true },
       };
 
-      const testRunnerAny = testRunner as any;
-      const command = testRunnerAny.buildTestCommand(framework, params);
+      const command = internals.buildTestCommand(framework, params);
 
       expect(command).toContain('pytest');
       expect(command).toContain('-v');
@@ -206,12 +229,10 @@ describe('TestRunnerService', () => {
 
   describe('getVerboseFlag', () => {
     it('should return correct verbose flags', () => {
-      const testRunnerAny = testRunner as any;
-      
-      expect(testRunnerAny.getVerboseFlag('jest')).toBe(' --verbose');
-      expect(testRunnerAny.getVerboseFlag('pytest')).toBe(' -v');
-      expect(testRunnerAny.getVerboseFlag('mocha')).toBe(' --reporter spec');
-      expect(testRunnerAny.getVerboseFlag('unknown')).toBe('');
+      expect(internals.getVerboseFlag('jest')).toBe(' --verbose');
+      expect(internals.getVerboseFlag('pytest')).toBe(' -v');
+      expect(internals.getVerboseFlag('mocha')).toBe(' --reporter spec');
+      expect(internals.getVerboseFlag('unknown')).toBe('');
     });
   });
 
@@ -333,8 +354,7 @@ describe('TestRunnerService', () => {
       const error = new Error('Command failed');
       const framework = 'jest';
 
-      const testRunnerAny = testRunner as any;
-      const result = testRunnerAny.handleTestError(error, framework);
+      const result = internals.handleTestError(error, framework);
 
       expect(result.framework).toBe('jest');
       expect(result.overall.failed).toBe(1);
@@ -365,23 +385,24 @@ describe('TestRunnerService', () => {
       const projectResultFile = '/valid/project/test-results.json';
       // 按路径分发：只有 projectPath 下的绝对路径能读到真实结果；
       // 相对路径（旧实现按服务器 cwd 解析）只能拿到陈旧文件
-      mockFs.promises.readFile = jest.fn().mockImplementation(async (p: unknown) => {
-        if (p === projectResultFile) {
-          return jestResultJson('SuiteFromProject', 'should pass');
-        }
-        if (p === 'test-results.json') {
-          return jestResultJson('STALE-SHOULD-NOT-APPEAR', 'stale test');
-        }
-        throw new Error('ENOENT');
-      }) as any;
+      mockFs.promises.readFile = jest
+        .fn()
+        .mockImplementation(async (p: unknown) => {
+          if (p === projectResultFile) {
+            return jestResultJson('SuiteFromProject', 'should pass');
+          }
+          if (p === 'test-results.json') {
+            return jestResultJson('STALE-SHOULD-NOT-APPEAR', 'stale test');
+          }
+          throw new Error('ENOENT');
+        }) as unknown as typeof fs.promises.readFile;
 
       // 新鲜度校验：结果文件 mtime 晚于本次运行启动时间（runStartedAt=0）
       mockFs.promises.stat = jest.fn().mockResolvedValue({
         mtimeMs: Date.now(),
-      }) as any;
+      }) as unknown as typeof fs.promises.stat;
 
-      const runnerAny = testRunner as any;
-      const result = await runnerAny.parseJsonResults('jest', '/valid/project', 0);
+      const result = await internals.parseJsonResults('jest', '/valid/project', 0);
 
       expect(result).not.toBeNull();
       expect(result.suites).toHaveLength(1);
@@ -392,15 +413,16 @@ describe('TestRunnerService', () => {
 
     it('projectPath 下无结果文件时返回 null（回退文本解析），不读 cwd 陈旧文件', async () => {
       // 只有 cwd 的陈旧文件可读；projectPath 下任何文件都 ENOENT
-      mockFs.promises.readFile = jest.fn().mockImplementation(async (p: unknown) => {
-        if (p === 'test-results.json') {
-          return jestResultJson('STALE-SHOULD-NOT-APPEAR', 'stale test');
-        }
-        throw new Error('ENOENT');
-      }) as any;
+      mockFs.promises.readFile = jest
+        .fn()
+        .mockImplementation(async (p: unknown) => {
+          if (p === 'test-results.json') {
+            return jestResultJson('STALE-SHOULD-NOT-APPEAR', 'stale test');
+          }
+          throw new Error('ENOENT');
+        }) as unknown as typeof fs.promises.readFile;
 
-      const runnerAny = testRunner as any;
-      const result = await runnerAny.parseJsonResults('jest', '/valid/project', 0);
+      const result = await internals.parseJsonResults('jest', '/valid/project', 0);
 
       // projectPath 无文件 → null（由调用方回退文本解析），绝不误读 cwd 的陈旧文件
       expect(result).toBeNull();
