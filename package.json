@@ -14,7 +14,7 @@
     "test": "node --max-old-space-size=2048 node_modules/jest/bin/jest.js --maxWorkers=2 --workerIdleMemoryLimit=512MB",
     "test:esm": "node --max-old-space-size=2048 --experimental-vm-modules node_modules/jest/bin/jest.js --maxWorkers=2 --workerIdleMemoryLimit=512MB",
     "test:watch": "node --max-old-space-size=2048 node_modules/jest/bin/jest.js --watch --maxWorkers=2 --workerIdleMemoryLimit=512MB",
-    "lint": "eslint src",
+    "lint": "eslint src --max-warnings 0",
     "lint:fix": "eslint src --fix",
     "clean": "rm -rf dist"
   },
