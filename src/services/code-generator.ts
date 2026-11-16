@@ -12,7 +12,7 @@ interface CodeGenerationParams {
 
 export class CodeGeneratorService {
   async generateImplementation(params: CodeGenerationParams): Promise<GeneratedImplementation> {
-    const { testCode, language, implementationStyle, architecturalConstraints } = params;
+    const { testCode, language, implementationStyle } = params;
 
     // Parse the test code to understand requirements
     const requirements = this.parseTestRequirements(testCode, language);
@@ -40,8 +40,6 @@ export class CodeGeneratorService {
   }
 
   private parseTestRequirements(testCode: string, language: SupportedLanguage): TestRequirement[] {
-    const requirements: TestRequirement[] = [];
-
     switch (language) {
       case SupportedLanguage.TYPESCRIPT:
       case SupportedLanguage.JAVASCRIPT:
@@ -284,7 +282,6 @@ module.exports = ${className};`;
     }
 
     // More comprehensive implementation
-    const returnType = this.inferReturnType(relevantReqs);
     const parameters = this.inferParameters(relevantReqs);
     
     return `${methodName}(${parameters}) {\n    // Implementation based on test requirements\n    ${this.generateMethodBody(methodName, relevantReqs, params)}\n  }`;
@@ -493,7 +490,7 @@ module.exports = ${className};`;
     return imports;
   }
 
-  private generateExports(requirements: TestRequirement[], language: SupportedLanguage): string[] {
+  private generateExports(requirements: TestRequirement[], _language: SupportedLanguage): string[] {
     const exports: string[] = [];
     
     if (requirements.length > 0) {
@@ -503,7 +500,7 @@ module.exports = ${className};`;
     return exports;
   }
 
-  private identifyDependencies(requirements: TestRequirement[], language: SupportedLanguage): string[] {
+  private identifyDependencies(_requirements: TestRequirement[], _language: SupportedLanguage): string[] {
     const dependencies: string[] = [];
     
     // Identify potential dependencies based on test requirements
@@ -521,24 +518,24 @@ module.exports = ${className};`;
     return 'any';
   }
 
-  private inferJavaReturnType(requirements: TestRequirement[]): string {
+  private inferJavaReturnType(_requirements: TestRequirement[]): string {
     return 'Object'; // Simplified
   }
 
-  private inferCSharpReturnType(requirements: TestRequirement[]): string {
+  private inferCSharpReturnType(_requirements: TestRequirement[]): string {
     return 'object'; // Simplified
   }
 
-  private inferParameters(requirements: TestRequirement[]): string {
+  private inferParameters(_requirements: TestRequirement[]): string {
     // Simplified parameter inference
     return 'data = null';
   }
 
-  private inferJavaParameters(requirements: TestRequirement[]): string {
+  private inferJavaParameters(_requirements: TestRequirement[]): string {
     return 'Object data';
   }
 
-  private inferCSharpParameters(requirements: TestRequirement[]): string {
+  private inferCSharpParameters(_requirements: TestRequirement[]): string {
     return 'object data = null';
   }
 

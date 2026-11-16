@@ -68,7 +68,7 @@ export class CoverageAnalyzerService {
       if (!stats.isDirectory()) {
         throw new Error(`Project path is not a directory: ${projectPath}`);
       }
-    } catch (error) {
+    } catch {
       throw new Error(`Invalid project path: ${projectPath}`);
     }
   }
@@ -334,12 +334,8 @@ export class CoverageAnalyzerService {
 
     for (const section of sections) {
       const lines = section.split('\n');
-      let fileName = '';
-      
       for (const line of lines) {
-        if (line.startsWith('SF:')) {
-          fileName = line.substring(3);
-        } else if (line.startsWith('LF:')) {
+        if (line.startsWith('LF:')) {
           totalLines += parseInt(line.substring(3));
         } else if (line.startsWith('LH:')) {
           coveredLines += parseInt(line.substring(3));

@@ -16,7 +16,7 @@ interface TestGenerationParams {
 
 export class TestGeneratorService {
   async generateTests(params: TestGenerationParams): Promise<GeneratedTests> {
-    const { requirements, language, framework, testType, existingCode } = params;
+    const { requirements, language, framework, testType } = params;
 
     // Validate framework support
     if (!this.isFrameworkSupported(language, framework)) {
@@ -319,7 +319,7 @@ public void ${testName}()
     className: string,
     methodName: string,
     params: TestGenerationParams,
-    specificCase?: string,
+    _specificCase?: string,
   ): string {
     const objectName = className.toLowerCase();
     
@@ -344,7 +344,7 @@ public void ${testName}()
   private generateAssertSection(
     testType: string,
     params: TestGenerationParams,
-    specificCase?: string,
+    _specificCase?: string,
   ): string {
     if (testType === 'error_case') {
       return '// Error case assertion handled in Act section';

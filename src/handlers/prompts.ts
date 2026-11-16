@@ -361,7 +361,7 @@ async function loadTemplate(templateName: string): Promise<string> {
   try {
     const templatePath = path.join(__dirname, '../../templates', templateName);
     return await fs.readFile(templatePath, 'utf8');
-  } catch (error) {
+  } catch {
     // Return a basic template if file doesn't exist
     return getDefaultTemplate(templateName);
   }

@@ -259,7 +259,7 @@ async function readTestFile(uri: string): Promise<ReadResourceResult> {
   const fullPath = path.join(process.env.PROJECT_PATH || process.cwd(), relativePath);
   
   const content = await fs.readFile(fullPath, 'utf8');
-  const stats = await fs.stat(fullPath);
+  await fs.stat(fullPath);
   
   return {
     contents: [

@@ -65,7 +65,7 @@ export class StorageService implements IStorageService, StorageRepository {
         // Convert date strings back to Date objects
         this.restoreDates(item);
         items.push(item);
-      } catch (error) {
+      } catch {
         // Skip malformed JSON lines
         console.warn(`Skipping malformed JSON line: ${line}`);
       }

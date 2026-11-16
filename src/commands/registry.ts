@@ -11,7 +11,7 @@
  */
 import { z } from 'zod';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { I18nService, SupportedLocale } from '../i18n.js';
+import type { SupportedLocale } from '../i18n.js';
 import { TDDStage, TestMethod } from '../types/storage.js';
 
 // ---------- 上下文与类型 ----------

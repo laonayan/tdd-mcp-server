@@ -36,7 +36,7 @@ export class TestRunnerService {
   }
 
   async runTests(params: TestRunnerParams): Promise<TestResults> {
-    const { projectPath, testFiles, testFramework, options = {} } = params;
+    const { projectPath, testFramework, options = {} } = params;
 
     // Validate framework
     const framework = this.getFrameworkConfig(testFramework);
@@ -99,7 +99,7 @@ export class TestRunnerService {
       if (!stats.isDirectory()) {
         throw new Error(`Project path is not a directory: ${projectPath}`);
       }
-    } catch (error) {
+    } catch {
       throw new Error(`Invalid project path: ${projectPath}`);
     }
   }
@@ -208,7 +208,7 @@ export class TestRunnerService {
       if (jsonResults) {
         return jsonResults;
       }
-    } catch (error) {
+    } catch {
       // Fall back to parsing stdout/stderr
     }
 
@@ -247,7 +247,7 @@ export class TestRunnerService {
         } else if (fileName.endsWith('.xml')) {
           return parsers.parseXmlResults(content, frameworkKey);
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }

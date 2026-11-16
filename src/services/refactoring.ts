@@ -189,7 +189,6 @@ export class RefactoringService {
         methodPattern = /function\s+(\w+)/g;
     }
 
-    const lines = sourceCode.split('\n');
     let match;
     
     while ((match = methodPattern.exec(sourceCode)) !== null) {
@@ -335,7 +334,7 @@ export class RefactoringService {
     return this.findMethodEnd(sourceCode, startIndex, language);
   }
 
-  private countMethodsInClass(classCode: string, language: string): number {
+  private countMethodsInClass(classCode: string, _language: string): number {
     const methods = this.findLongMethods(classCode);
     return methods.length;
   }
@@ -393,7 +392,7 @@ export class RefactoringService {
     sourceCode: string,
     refactorType: string,
     analysis: CodeAnalysis,
-    goals: string[],
+    _goals: string[],
   ): Promise<Refactoring[]> {
     const refactorings: Refactoring[] = [];
 
@@ -519,7 +518,7 @@ export class RefactoringService {
     return refactorings;
   }
 
-  private generateMoveMethodRefactorings(sourceCode: string, analysis: CodeAnalysis): Refactoring[] {
+  private generateMoveMethodRefactorings(_sourceCode: string, _analysis: CodeAnalysis): Refactoring[] {
     // This would involve more complex analysis to determine which methods should be moved
     return [];
   }
@@ -575,12 +574,10 @@ export class RefactoringService {
   }
 
   private generateDuplicationRemoval(duplicatedCode: string, language: string): string {
-    const methodName = 'sharedMethod';
-    
     return `// Extract duplicated code into:\n${this.generateExtractedMethod(duplicatedCode, language)}`;
   }
 
-  private generateNamingSuggestion(badName: string, sourceCode: string): string {
+  private generateNamingSuggestion(badName: string, _sourceCode: string): string {
     // Simple naming suggestions
     const suggestions: Record<string, string> = {
       'data': 'userData',

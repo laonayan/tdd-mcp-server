@@ -1,8 +1,6 @@
 import { TestRunnerService } from '../test-runner.js';
-import { TestResults } from '../../types/tdd.js';
 import * as fs from 'fs';
 import { exec } from 'child_process';
-import * as util from 'util';
 // V3：解析逻辑已下沉纯核心层，测试直接对纯函数断言（零 mock）
 import * as parsers from '../../core/parsers/test-results.js';
 

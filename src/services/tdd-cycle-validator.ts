@@ -63,7 +63,7 @@ export class TDDCycleValidatorService {
       const { stdout } = await this.executor.execute(gitCommand, { cwd: projectPath });
       
       return stdout.split('\n').filter(line => line.trim().length > 0);
-    } catch (error) {
+    } catch {
       // If git is not available or not a git repository, return empty array
       return [];
     }
@@ -89,7 +89,7 @@ export class TDDCycleValidatorService {
       }
       
       return TDDCycleState.RED; // Default to red if unclear
-    } catch (error) {
+    } catch {
       // If we can't determine state, assume red
       return TDDCycleState.RED;
     }
@@ -117,7 +117,7 @@ export class TDDCycleValidatorService {
         if (files.length > 0) {
           return true;
         }
-      } catch (error) {
+      } catch {
         // Continue with next pattern
       }
     }
@@ -155,14 +155,14 @@ export class TDDCycleValidatorService {
           });
 
           return parseQuickTestOutput(stdout + stderr, command);
-        } catch (error: any) {
+        } catch {
           // If command fails, try next one
           continue;
         }
       }
 
       return { passed: 0, failed: 0 };
-    } catch (error) {
+    } catch {
       return { passed: 0, failed: 0 };
     }
   }
@@ -175,7 +175,7 @@ export class TDDCycleValidatorService {
       return codeQualityIssues.duplicationCount > 0 || 
              codeQualityIssues.complexityIssues > 0 || 
              codeQualityIssues.longMethods > 0;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -213,7 +213,7 @@ export class TDDCycleValidatorService {
         analysis.complexityIssues += detectComplexityIssues(content);
         analysis.longMethods += detectLongMethods(content);
       }
-    } catch (error) {
+    } catch {
       // Analysis failed, assume no issues
     }
 
