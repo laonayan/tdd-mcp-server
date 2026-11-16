@@ -107,6 +107,28 @@ else
     exit 1
 fi
 
+# 测试10: 会话状态资源（真实存储驱动）
+echo "🧪 测试10: 会话状态资源"
+RESULT=$(echo '{"jsonrpc":"2.0","id":10,"method":"resources/list","params":{}}' | USE_NEW_TOOLS=true node dist/server.js 2>/dev/null)
+if echo "$RESULT" | grep -q "tdd://sessions" && echo "$RESULT" | grep -q "tdd://features" && echo "$RESULT" | grep -q "tdd://tracking"; then
+    echo "✅ 会话状态资源正常"
+else
+    echo "❌ 会话状态资源失败"
+    exit 1
+fi
+
+# 测试11: 长任务进度通知（progressToken 触发 notifications/progress）
+echo "🧪 测试11: 进度通知"
+# 先注册 feature 让 feature 工具产生真实状态，再用 progressToken 跑完整工作流
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"feature","arguments":{"command":"create","name":"集成测试特性","acceptanceCriteria":["可创建"]}}}' | USE_NEW_TOOLS=true node dist/server.js >/dev/null 2>&1
+RESULT=$(echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"tdd","arguments":{"requirements":"加法函数"},"_meta":{"progressToken":"integration-tok"}}}' | USE_NEW_TOOLS=true node dist/server.js 2>/dev/null)
+if echo "$RESULT" | grep -q "notifications/progress" && echo "$RESULT" | grep -q "integration-tok"; then
+    echo "✅ 进度通知正常"
+else
+    echo "❌ 进度通知失败"
+    exit 1
+fi
+
 echo ""
 echo "🎉 所有集成测试通过！"
 echo ""
@@ -118,3 +140,5 @@ echo "✅ 子命令支持"
 echo "✅ Session自动管理"
 echo "✅ 错误处理"
 echo "✅ 动态配置切换"
+echo "✅ 会话状态资源（tdd://sessions 等）"
+echo "✅ 长任务进度通知"
