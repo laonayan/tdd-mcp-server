@@ -24,6 +24,7 @@ import {
   type CommandContext,
 } from '../commands/registry.js';
 import { createDefaultHandlerDeps } from '../default-deps.js';
+import { createProgressReporter, type ProgressReporter, type SendNotification } from './progress-reporter.js';
 
 /** 可注入依赖（测试注入 fake；缺省经组合根构建，不在 handler 内散落 new） */
 export interface NewToolsHandlerDeps {
@@ -86,7 +87,16 @@ export class NewToolsHandler {
     return { tools };
   }
 
-  async callTool(request: CallToolRequest): Promise<CallToolResult> {
+  async callTool(
+    request: CallToolRequest,
+    extra?: {
+      sendNotification?: (
+        notification:
+          | { method: string; params?: Record<string, unknown> }
+          | import('@modelcontextprotocol/sdk/types.js').ServerNotification,
+      ) => Promise<void>;
+    },
+  ): Promise<CallToolResult> {
     const { name, arguments: args } = request.params;
 
     const spec = findToolSpec(name);
@@ -119,7 +129,14 @@ export class NewToolsHandler {
             return this.createErrorResult(ctx.invalidParamsError());
           }
           await this.updateSessionStage(TDDStage.RED);
-          const result = await this.executeFullTDDWorkflow(args);
+          // 客户端提供 _meta.progressToken 时按步发进度通知；否则 no-op
+          const meta = request.params._meta as { progressToken?: string | number } | undefined;
+          // SDK sendNotification 收 notification 对象；适配为 (method, params) 形态
+          const send: SendNotification | undefined = extra?.sendNotification
+            ? (method, params) => extra.sendNotification!({ method, params: params as Record<string, unknown> })
+            : undefined;
+          const reporter = createProgressReporter(meta, send, 5);
+          const result = await this.executeFullTDDWorkflow(args, reporter);
           await this.updateSessionStage(TDDStage.REFACTOR);
           return result;
         }
@@ -166,7 +183,10 @@ export class NewToolsHandler {
    * 完整TDD流程：串行执行五步，每步附带真实产物摘要。
    * 单步失败不中断汇总（TDD 循环中测试失败是常态信息）。
    */
-  private async executeFullTDDWorkflow(rawArgs: Record<string, unknown>): Promise<CallToolResult> {
+  private async executeFullTDDWorkflow(
+    rawArgs: Record<string, unknown>,
+    progress: ProgressReporter = { step: async () => undefined },
+  ): Promise<CallToolResult> {
     // 完整流程入参单点形状断言（generate 参数 + 各步骤用到的可选字段）
     const args = rawArgs as unknown as Parameters<TestGeneratorService['generateTests']>[0] & {
       projectPath?: string; testCode?: string; testCommand?: string | undefined;
@@ -182,7 +202,7 @@ export class NewToolsHandler {
         testType: args.testType,
       });
       return `${generated.tests.length} tests, estimated coverage ${generated.metadata.estimatedCoverage}%`;
-    });
+    }, progress, 0);
     await this.updateSessionStage(TDDStage.RED);
 
     await this.appendStepResult(results, '✅ 生成最小实现', async () => {
@@ -192,7 +212,7 @@ export class NewToolsHandler {
         implementationStyle: 'minimal',
       });
       return `${impl.imports?.length ?? 0} imports, code ${impl.code.length} chars`;
-    });
+    }, progress, 1);
     await this.updateSessionStage(TDDStage.GREEN);
 
     await this.appendStepResult(results, '✅ 运行测试', async () => {
@@ -207,7 +227,7 @@ export class NewToolsHandler {
         0,
       );
       return `${passed}/${total} passed`;
-    });
+    }, progress, 2);
 
     await this.appendStepResult(results, '✅ 分析覆盖率', async () => {
       try {
@@ -220,7 +240,7 @@ export class NewToolsHandler {
       } catch (e) {
         return `skipped: ${e instanceof Error ? e.message : String(e)}`;
       }
-    });
+    }, progress, 3);
 
     await this.appendStepResult(results, '✅ 提供重构建议', async () => {
       const validation = await this.services.tddCycleValidator.validateCycle({
@@ -228,7 +248,7 @@ export class NewToolsHandler {
         timeWindow: '1 hour',
       });
       return validation.isValid ? 'cycle valid' : 'cycle issues found';
-    });
+    }, progress, 4);
 
     return this.createSuccessResult(`完整TDD流程执行完成:\n${results.join('\n')}`);
   }
@@ -238,12 +258,19 @@ export class NewToolsHandler {
     results: string[],
     label: string,
     step: () => Promise<string>,
+    progress?: ProgressReporter,
+    progressIndex?: number,
   ): Promise<void> {
     try {
       const summary = await step();
       results.push(`${label}（${summary}）`);
     } catch (error) {
       results.push(`${label}（错误: ${error instanceof Error ? error.message : String(error)}）`);
+    } finally {
+      // 该步已结束（无论成败）——进度反映实际推进，不因单步失败丢失
+      if (progress && progressIndex !== undefined) {
+        await progress.step(progressIndex, label);
+      }
     }
   }
 
