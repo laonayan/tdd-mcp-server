@@ -74,21 +74,22 @@ export class StorageService implements IStorageService, StorageRepository {
     return items;
   }
 
-  private restoreDates(obj: any): void {
+  private restoreDates(obj: unknown): void {
     if (!obj || typeof obj !== 'object') return;
+    const record = obj as Record<string, unknown>;
 
     const dateFields = ['createdAt', 'updatedAt', 'startedAt', 'completedAt', 'lastExecutedAt', 'lastModified'];
     
     for (const field of dateFields) {
-      if (obj[field] && typeof obj[field] === 'string') {
-        obj[field] = new Date(obj[field]);
+      if (record[field] && typeof record[field] === 'string') {
+        record[field] = new Date(record[field]);
       }
     }
 
     // Recursively process nested objects
-    for (const key in obj) {
-      if (obj[key] && typeof obj[key] === 'object') {
-        this.restoreDates(obj[key]);
+    for (const key in record) {
+      if (record[key] && typeof record[key] === 'object') {
+        this.restoreDates(record[key]);
       }
     }
   }
@@ -103,7 +104,7 @@ export class StorageService implements IStorageService, StorageRepository {
     await fs.outputFile(filePath, jsonLine, { flag: 'a' });
   }
 
-  private validateFeature(feature: any): void {
+  private validateFeature(feature: Feature): void {
     const result = FeatureSchema.safeParse(feature);
     if (!result.success) {
       throw new Error(`Invalid feature data: ${result.error.message}`);
@@ -301,7 +302,7 @@ export class StorageService implements IStorageService, StorageRepository {
       const method = methods.find(m => m.id === methodId);
       
       if (method) {
-        method.status = status as any; // Type assertion for now
+        method.status = status as TestMethod['status'];
         await this.writeJsonlFile(filePath, methods);
         return true;
       }

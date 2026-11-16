@@ -3,7 +3,7 @@ import path from 'path';
 import {
   TestResults,
 } from '../types/tdd.js';
-import { SUPPORTED_FRAMEWORKS } from '../types/test-frameworks.js';
+import { SUPPORTED_FRAMEWORKS, FrameworkConfig, FrameworkWithKey } from '../types/test-frameworks.js';
 import { isNestedExecution } from './execution-guard.js';
 // 纯核心解析器（零 IO）：V3 架构下沉层
 import * as parsers from '../core/parsers/test-results.js';
@@ -75,13 +75,13 @@ export class TestRunnerService {
         projectPath,
         startTime,
       );
-    } catch (error: any) {
+    } catch (error) {
       return this.handleTestError(error, testFramework);
     }
   }
 
-  private getFrameworkConfig(frameworkName: string): any {
-    const frameworks = SUPPORTED_FRAMEWORKS as Record<string, any>;
+  private getFrameworkConfig(frameworkName: string): FrameworkWithKey | null {
+    const frameworks = SUPPORTED_FRAMEWORKS as Record<string, FrameworkConfig>;
 
     for (const [key, config] of Object.entries(frameworks)) {
       if (config.name.toLowerCase() === frameworkName.toLowerCase() ||
@@ -105,7 +105,7 @@ export class TestRunnerService {
   }
 
   /** 递归保护时返回的降级结果：如实标注被跳过及原因（不谎报通过） */
-  private buildRecursiveGuardResult(frameworkKey: string, command: string): any {
+  private buildRecursiveGuardResult(frameworkKey: string, command: string): TestResults & { note: string } {
     return {
       framework: frameworkKey,
       suites: [],
@@ -122,7 +122,7 @@ export class TestRunnerService {
     };
   }
 
-  private buildTestCommand(framework: any, params: TestRunnerParams): string {
+  private buildTestCommand(framework: FrameworkWithKey, params: TestRunnerParams): string {
     const { testFiles, options = {} } = params;
     let command = framework.commands.run;
 
@@ -198,7 +198,7 @@ export class TestRunnerService {
   private async parseTestResults(
     stdout: string,
     stderr: string,
-    framework: any,
+    framework: FrameworkWithKey,
     duration: number,
     projectPath: string,
     runStartedAt: number,
@@ -255,7 +255,7 @@ export class TestRunnerService {
     return null;
   }
 
-  private convertJsonToTestResults(data: any, frameworkKey: string): TestResults {
+  private convertJsonToTestResults(data: unknown, frameworkKey: string): TestResults {
     switch (frameworkKey) {
       case 'jest':
         return parsers.parseJestResults(data);
@@ -270,8 +270,8 @@ export class TestRunnerService {
     }
   }
 
-  private handleTestError(error: any, framework: string): TestResults {
-    const errorMessage = error.message || error.toString();
+  private handleTestError(error: unknown, framework: string): TestResults {
+    const errorMessage = error instanceof Error ? error.message : String(error);
 
     return {
       framework,

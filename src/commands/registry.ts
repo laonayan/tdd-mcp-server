@@ -40,7 +40,7 @@ export interface CommandSpec {
   command?: string;
   /** 宽松 zod 校验：默认直接放行（对象即可），特殊命令自行收紧 */
   schema: z.ZodTypeAny;
-  handler: (args: any, ctx: CommandContext) => Promise<unknown>;
+  handler: (args: CommandArgs, ctx: CommandContext) => Promise<unknown>;
 }
 
 export interface ToolSpec {
@@ -52,11 +52,17 @@ export interface ToolSpec {
 
 const passthrough = z.object({}).passthrough();
 
+/** 子命令入参：MCP 客户端传来的 JSON 对象（zod 已做宽松校验，必需字段在 handler 内显式检查） */
+type CommandArgs = Record<string, unknown>;
+
+/** 单点形状断言：把宽松入参投影为 service 参数类型 */
+const as = <T>(args: CommandArgs): T => args as unknown as T;
+
 // ---------- 共用小工具 ----------
 
 const err = (message: string) => ({ __error: message });
 
-function isErr(result: any): result is { __error: string } {
+function isErr(result: unknown): result is { __error: string } {
   return result !== null && typeof result === 'object' && '__error' in result;
 }
 
@@ -75,17 +81,12 @@ const tddCommands: CommandSpec[] = [
     command: 'generate',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.requirements) {
+      const p = as<Parameters<CommandContext['services']['testGenerator']['generateTests']>[0]>(args);
+      if (!p.requirements) {
         return err('requirements is required for generate command');
       }
       await ctx.updateSessionStage(TDDStage.RED);
-      const generated = await ctx.services.testGenerator.generateTests({
-        requirements: args.requirements,
-        language: args.language,
-        framework: args.framework,
-        testType: args.testType,
-        existingCode: args.existingCode,
-      });
+      const generated = await ctx.services.testGenerator.generateTests(p);
       return `Test cases generated successfully (${generated.tests.length} tests, ` +
         `estimated coverage ${generated.metadata.estimatedCoverage}%):\n` +
         JSON.stringify(generated, null, 2);
@@ -95,15 +96,14 @@ const tddCommands: CommandSpec[] = [
     command: 'implement',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.testCode) {
+      const p = as<Parameters<CommandContext['services']['codeGenerator']['generateImplementation']>[0]>(args);
+      if (!p.testCode) {
         return err('testCode is required for implement command');
       }
       await ctx.updateSessionStage(TDDStage.GREEN);
       const impl = await ctx.services.codeGenerator.generateImplementation({
-        testCode: args.testCode,
-        language: args.language,
-        implementationStyle: args.implementationStyle || 'minimal',
-        architecturalConstraints: args.architecturalConstraints,
+        ...p,
+        implementationStyle: p.implementationStyle || 'minimal',
       });
       return 'Implementation code generated successfully:\n' + JSON.stringify(impl, null, 2);
     },
@@ -112,11 +112,12 @@ const tddCommands: CommandSpec[] = [
     command: 'test',
     schema: passthrough,
     handler: async (args, ctx) => {
+      const p = as<{ projectPath?: string; testFiles?: string[]; framework?: string; testFramework?: string; options?: Record<string, unknown> }>(args);
       const run = await ctx.services.testRunner.runTests({
-        projectPath: args.projectPath || process.env.PROJECT_PATH || process.cwd(),
-        testFiles: args.testFiles,
-        testFramework: args.framework || args.testFramework || 'jest',
-        options: args.options || {},
+        projectPath: p.projectPath || process.env.PROJECT_PATH || process.cwd(),
+        testFiles: p.testFiles,
+        testFramework: p.framework || p.testFramework || 'jest',
+        options: p.options || {},
       });
       return 'Tests executed:\n' + JSON.stringify(run, null, 2);
     },
@@ -125,11 +126,12 @@ const tddCommands: CommandSpec[] = [
     command: 'coverage',
     schema: passthrough,
     handler: async (args, ctx) => {
+      const p = as<{ projectPath?: string; testCommand: string; thresholds?: Record<string, number>; outputFormat?: 'json' | 'html' | 'lcov' | 'text' }>(args);
       const coverage = await ctx.services.coverageAnalyzer.analyzeCoverage({
-        projectPath: args.projectPath || process.env.PROJECT_PATH || process.cwd(),
-        testCommand: args.testCommand,
-        thresholds: args.thresholds,
-        outputFormat: args.outputFormat || 'json',
+        projectPath: p.projectPath || process.env.PROJECT_PATH || process.cwd(),
+        testCommand: p.testCommand,
+        thresholds: p.thresholds,
+        outputFormat: p.outputFormat || 'json',
       });
       return 'Coverage analysis completed:\n' + JSON.stringify(coverage, null, 2);
     },
@@ -138,15 +140,15 @@ const tddCommands: CommandSpec[] = [
     command: 'refactor',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.sourceCode) {
+      const p = as<Parameters<CommandContext['services']['refactoring']['refactorCode']>[0]>(args);
+      if (!p.sourceCode) {
         return err('sourceCode is required for refactor command');
       }
       await ctx.updateSessionStage(TDDStage.REFACTOR);
       const refactor = await ctx.services.refactoring.refactorCode({
-        sourceCode: args.sourceCode,
-        refactorType: args.refactorType,
-        preserveTests: args.preserveTests !== false,
-        refactoringGoals: args.refactoringGoals || [],
+        ...p,
+        preserveTests: p.preserveTests !== false,
+        refactoringGoals: p.refactoringGoals || [],
       });
       return 'Refactoring suggestions provided:\n' + JSON.stringify(refactor, null, 2);
     },
@@ -155,10 +157,11 @@ const tddCommands: CommandSpec[] = [
     command: 'validate',
     schema: passthrough,
     handler: async (args, ctx) => {
+      const p = as<{ projectPath?: string; gitHistory?: string[]; timeWindow?: string }>(args);
       const validation = await ctx.services.tddCycleValidator.validateCycle({
-        projectPath: args.projectPath || process.env.PROJECT_PATH || process.cwd(),
-        gitHistory: args.gitHistory,
-        timeWindow: args.timeWindow || '1 hour',
+        projectPath: p.projectPath || process.env.PROJECT_PATH || process.cwd(),
+        gitHistory: p.gitHistory,
+        timeWindow: p.timeWindow || '1 hour',
       });
       return 'TDD cycle validation completed:\n' + JSON.stringify(validation, null, 2);
     },
@@ -173,15 +176,10 @@ const featureCommands: CommandSpec[] = [
     schema: passthrough,
     handler: async (args, ctx) => {
       try {
+        const p = as<Parameters<CommandContext['services']['featureManagement']['createFeature']>[0]>(args);
         const feature = await ctx.services.featureManagement.createFeature({
-          name: args.name,
-          description: args.description ?? '',
-          acceptanceCriteria: args.acceptanceCriteria,
-          priority: args.priority,
-          projectId: args.projectId,
-          tags: args.tags,
-          estimatedHours: args.estimatedHours,
-          assignee: args.assignee,
+          ...p,
+          description: p.description ?? '',
         });
         return 'Feature created successfully:\n' + JSON.stringify(feature, null, 2);
       } catch (error) {
@@ -193,15 +191,12 @@ const featureCommands: CommandSpec[] = [
     command: 'update',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.featureId || !args.status) {
+      const p = as<Parameters<CommandContext['services']['featureManagement']['updateFeatureStatus']>[0]>(args);
+      if (!p.featureId || !p.status) {
         return err('featureId and status are required for update command');
       }
       try {
-        const updated = await ctx.services.featureManagement.updateFeatureStatus({
-          featureId: args.featureId,
-          status: args.status,
-          progress: args.progress,
-        });
+        const updated = await ctx.services.featureManagement.updateFeatureStatus(p);
         return 'Feature updated successfully:\n' + JSON.stringify(updated, null, 2);
       } catch (error) {
         return err(error instanceof Error ? error.message : String(error));
@@ -212,15 +207,12 @@ const featureCommands: CommandSpec[] = [
     command: 'link',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.featureId || !args.filePaths || args.filePaths.length === 0) {
+      const p = as<Parameters<CommandContext['services']['featureManagement']['linkFeatureFiles']>[0]>(args);
+      if (!p.featureId || !p.filePaths || p.filePaths.length === 0) {
         return err('featureId and filePaths are required for link command');
       }
       try {
-        const associations = await ctx.services.featureManagement.linkFeatureFiles({
-          featureId: args.featureId,
-          filePaths: args.filePaths,
-          fileType: args.fileType,
-        });
+        const associations = await ctx.services.featureManagement.linkFeatureFiles(p);
         return 'Files linked to feature successfully:\n' + JSON.stringify(associations, null, 2);
       } catch (error) {
         return err(error instanceof Error ? error.message : String(error));
@@ -231,17 +223,18 @@ const featureCommands: CommandSpec[] = [
     command: 'find',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.query) {
+      const p = as<{ query: string; projectId?: string; maxResults?: number }>(args);
+      if (!p.query) {
         return err('query is required for find command');
       }
       try {
-        const projectId = args.projectId
+        const projectId = p.projectId
           || ctx.services.featureManagement.getCurrentProject()
           || 'default-project';
         const similar = await ctx.services.featureManagement.findSimilarFeatures(
-          args.query,
+          p.query,
           projectId,
-          args.maxResults,
+          p.maxResults,
         );
         if (similar.length === 0) {
           return 'No similar features found: []';
@@ -261,24 +254,25 @@ const trackingCommands: CommandSpec[] = [
     command: 'register',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.featureId || !args.name || !args.filePath || !args.framework) {
+      const p = as<{ featureId: string; name: string; filePath: string; framework: string; projectId?: string; testType?: string }>(args);
+      if (!p.featureId || !p.name || !p.filePath || !p.framework) {
         return err('featureId, name, filePath, and framework are required');
       }
       const methodId = `test-${Date.now()}`;
-      const projectId = args.projectId
+      const projectId = p.projectId
         || ctx.services.featureManagement.getCurrentProject()
         || 'default-project';
 
       const testMethod: TestMethod = {
         id: methodId,
-        featureId: args.featureId,
+        featureId: p.featureId,
         projectId,
-        name: args.name,
-        filePath: args.filePath,
+        name: p.name,
+        filePath: p.filePath,
         status: 'pending',
-        framework: args.framework,
+        framework: p.framework,
         createdAt: new Date(),
-        testType: args.testType,
+        testType: p.testType as TestMethod['testType'],
       };
 
       try {
@@ -291,27 +285,29 @@ const trackingCommands: CommandSpec[] = [
   },
   {
     command: 'result',
-    schema: z.object({}).passthrough().superRefine((value: any, zctx) => {
-      if (value.result !== undefined && typeof value.result?.passed !== 'boolean') {
+    schema: z.object({}).passthrough().superRefine((value: Record<string, unknown>, zctx) => {
+      const result = value.result as { passed?: unknown } | undefined;
+      if (result !== undefined && typeof result?.passed !== 'boolean') {
         zctx.addIssue({ code: z.ZodIssueCode.custom, message: 'result.passed must be boolean' });
       }
     }),
     handler: async (args, ctx) => {
-      if (!args.methodId || !args.result || typeof args.result.passed !== 'boolean') {
+      const p = as<{ methodId: string; result: { passed: boolean; duration?: number; output?: string; error?: string; coverage?: number } }>(args);
+      if (!p.methodId || !p.result || typeof p.result.passed !== 'boolean') {
         return err('methodId and result (with boolean passed) are required for result command');
       }
       try {
-        const ok = await ctx.services.storage.updateTestExecutionResult(args.methodId, {
-          duration: args.result.duration ?? 0,
-          passed: args.result.passed,
-          output: args.result.output,
-          error: args.result.error,
-          coverage: args.result.coverage,
+        const ok = await ctx.services.storage.updateTestExecutionResult(p.methodId, {
+          duration: p.result.duration ?? 0,
+          passed: p.result.passed,
+          output: p.result.output,
+          error: p.result.error,
+          coverage: p.result.coverage,
         });
         if (!ok) {
-          return err(`Failed to update test execution result: ${args.methodId}`);
+          return err(`Failed to update test execution result: ${p.methodId}`);
         }
-        const updated = await ctx.services.storage.loadTestMethod(args.methodId);
+        const updated = await ctx.services.storage.loadTestMethod(p.methodId);
         return 'Test execution result updated:\n' + JSON.stringify(updated, null, 2);
       } catch (error) {
         return err(error instanceof Error ? error.message : String(error));
@@ -322,15 +318,16 @@ const trackingCommands: CommandSpec[] = [
     command: 'status',
     schema: passthrough,
     handler: async (args, ctx) => {
-      if (!args.methodId || !args.status) {
+      const p = as<{ methodId: string; status: string }>(args);
+      if (!p.methodId || !p.status) {
         return err('methodId and status are required for status command');
       }
       try {
-        const ok = await ctx.services.storage.updateTestMethodStatus(args.methodId, args.status);
+        const ok = await ctx.services.storage.updateTestMethodStatus(p.methodId, p.status);
         if (!ok) {
-          return err(`Failed to update test method status: ${args.methodId}`);
+          return err(`Failed to update test method status: ${p.methodId}`);
         }
-        const updated = await ctx.services.storage.loadTestMethod(args.methodId);
+        const updated = await ctx.services.storage.loadTestMethod(p.methodId);
         return 'Test method status updated:\n' + JSON.stringify(updated, null, 2);
       } catch (error) {
         return err(error instanceof Error ? error.message : String(error));

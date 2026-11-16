@@ -463,7 +463,7 @@ public void ${testName}()
 
   private isFrameworkSupported(language: SupportedLanguage, framework: string): boolean {
     // Check if the framework is supported for the given language by key or name
-    const frameworks = SUPPORTED_FRAMEWORKS as Record<string, any>;
+    const frameworks = SUPPORTED_FRAMEWORKS as unknown as Record<string, { name: string; language?: string }>;
     
     for (const [key, config] of Object.entries(frameworks)) {
       if ((key.toLowerCase() === framework.toLowerCase() || 

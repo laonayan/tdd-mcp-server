@@ -42,6 +42,18 @@ export const TestTemplateSchema = z.object({
 });
 
 // 支持的测试框架定义
+/** 框架配置的真实形状（test-runner 消费的字段子集，容忍额外字段） */
+export interface FrameworkConfig {
+  name: string;
+  language?: string;
+  supportedTestTypes?: readonly string[];
+  configFiles?: readonly string[];
+  devDependencies?: readonly string[];
+  commands: { run: string; watch?: string; coverage?: string; install?: string };
+  [key: string]: unknown;
+}
+export type FrameworkWithKey = FrameworkConfig & { key: string };
+
 export const SUPPORTED_FRAMEWORKS = {
   // JavaScript/TypeScript
   jest: {

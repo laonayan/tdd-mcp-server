@@ -52,8 +52,8 @@ export class TDDCycleValidatorService {
         suggestions: analysis.suggestions,
         score: analysis.score,
       };
-    } catch (error: any) {
-      throw new Error(`TDD cycle validation failed: ${error.message}`);
+    } catch (error) {
+      throw new Error(`TDD cycle validation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

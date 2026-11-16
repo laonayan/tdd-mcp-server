@@ -107,10 +107,10 @@ export class NewToolsHandler {
     try {
       // 自动管理TDD Session（tdd 工具语义）
       if (name === 'tdd') {
-        await this.ensureActiveSession(args as any);
+        await this.ensureActiveSession(args as Record<string, unknown>);
       }
 
-      const command: string | undefined = (args as any)?.command;
+      const command = (args as Record<string, unknown>)?.command as string | undefined;
 
       // 无 command：各工具的默认行为
       if (!command) {
@@ -166,7 +166,11 @@ export class NewToolsHandler {
    * 完整TDD流程：串行执行五步，每步附带真实产物摘要。
    * 单步失败不中断汇总（TDD 循环中测试失败是常态信息）。
    */
-  private async executeFullTDDWorkflow(args: any): Promise<CallToolResult> {
+  private async executeFullTDDWorkflow(rawArgs: Record<string, unknown>): Promise<CallToolResult> {
+    // 完整流程入参单点形状断言（generate 参数 + 各步骤用到的可选字段）
+    const args = rawArgs as unknown as Parameters<TestGeneratorService['generateTests']>[0] & {
+      projectPath?: string; testCode?: string; testCommand?: string | undefined;
+    };
     const results: string[] = [];
     const projectPath = args.projectPath || process.env.PROJECT_PATH || process.cwd();
 
@@ -197,9 +201,9 @@ export class NewToolsHandler {
         testFramework: args.framework || 'jest',
         options: {},
       });
-      const total = run.suites.reduce((sum: number, s: any) => sum + s.tests.length, 0);
+      const total = run.suites.reduce((sum: number, s) => sum + s.tests.length, 0);
       const passed = run.suites.reduce(
-        (sum: number, s: any) => sum + s.tests.filter((t: any) => t.status === 'passed').length,
+        (sum: number, s) => s.tests.filter(t => t.status === 'passed').length,
         0,
       );
       return `${passed}/${total} passed`;
@@ -209,7 +213,7 @@ export class NewToolsHandler {
       try {
         const coverage = await this.services.coverageAnalyzer.analyzeCoverage({
           projectPath,
-          testCommand: args.testCommand,
+          testCommand: args.testCommand as string,
           outputFormat: 'json',
         });
         return `lines ${coverage.overall?.lines ?? 'N/A'}%`;
@@ -245,15 +249,15 @@ export class NewToolsHandler {
 
   // ---------- TDD 会话生命周期 ----------
 
-  private async ensureActiveSession(args: any): Promise<void> {
+  private async ensureActiveSession(args: Record<string, unknown>): Promise<void> {
     if (!this.currentSessionId) {
       const sessionId = `session-${Date.now()}`;
       const projectId = 'auto-project';
-      const developer = args?.developer || 'unknown';
+      const developer = (args?.developer as string) || 'unknown';
 
       const session = {
         id: sessionId,
-        featureId: args?.featureId || 'auto-feature',
+        featureId: (args?.featureId as string) || 'auto-feature',
         projectId,
         developer,
         stage: TDDStage.RED,

@@ -9,6 +9,18 @@ import { isNestedExecution } from './execution-guard.js';
 import { GuardedCommandExecutor } from '../adapters/guarded-command-executor.js';
 import type { CommandExecutor } from '../core/ports.js';
 
+/** 覆盖率文件的宽松解析形状（json/xml/lcov/text 统一投影） */
+interface ParsedCoverage {
+  files: Record<string, RawCoverageFile>;
+  overall: { lines: number; functions: number; branches: number; statements: number };
+}
+interface RawCoverageFile {
+  lines?: { total?: number; covered?: number };
+  functions?: { total?: number; covered?: number };
+  branches?: { total?: number; covered?: number };
+  statements?: { total?: number; covered?: number };
+}
+
 interface CoverageAnalysisParams {
   projectPath: string;
   testCommand: string;
@@ -57,8 +69,8 @@ export class CoverageAnalyzerService {
       const report = this.generateCoverageReport(coverageData, thresholds);
       
       return report;
-    } catch (error: any) {
-      throw new Error(`Coverage analysis failed: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Coverage analysis failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -207,7 +219,7 @@ export class CoverageAnalyzerService {
     }
   }
 
-  private async parseCoverageResults(projectPath: string, outputFormat: string): Promise<any> {
+  private async parseCoverageResults(projectPath: string, outputFormat: string): Promise<ParsedCoverage> {
     const coverageFiles = await this.findCoverageFiles(projectPath, outputFormat);
     
     if (coverageFiles.length === 0) {
@@ -220,7 +232,7 @@ export class CoverageAnalyzerService {
     
     try {
       if (mainCoverageFile.endsWith('.json')) {
-        return JSON.parse(content);
+        return JSON.parse(content) as ParsedCoverage;
       } else if (mainCoverageFile.endsWith('.xml')) {
         return this.parseXmlCoverage(content);
       } else if (mainCoverageFile.endsWith('.lcov')) {
@@ -296,9 +308,9 @@ export class CoverageAnalyzerService {
     return potentialFiles;
   }
 
-  private parseXmlCoverage(xmlContent: string): any {
+  private parseXmlCoverage(xmlContent: string): ParsedCoverage {
     // Basic XML parsing for Cobertura format
-    const coverage: any = {
+    const coverage: ParsedCoverage = {
       files: {},
       overall: { lines: 0, functions: 0, branches: 0, statements: 0 },
     };
@@ -318,8 +330,8 @@ export class CoverageAnalyzerService {
     return coverage;
   }
 
-  private parseLcovCoverage(lcovContent: string): any {
-    const coverage: any = {
+  private parseLcovCoverage(lcovContent: string): ParsedCoverage {
+    const coverage: ParsedCoverage = {
       files: {},
       overall: { lines: 0, functions: 0, branches: 0, statements: 0 },
     };
@@ -359,8 +371,8 @@ export class CoverageAnalyzerService {
     return coverage;
   }
 
-  private parseTextCoverage(textContent: string): any {
-    const coverage: any = {
+  private parseTextCoverage(textContent: string): ParsedCoverage {
+    const coverage: ParsedCoverage = {
       files: {},
       overall: { lines: 0, functions: 0, branches: 0, statements: 0 },
     };
@@ -381,7 +393,7 @@ export class CoverageAnalyzerService {
   }
 
   private generateCoverageReport(
-    coverageData: any,
+    coverageData: ParsedCoverage,
     thresholds?: CoverageAnalysisParams['thresholds'],
   ): CoverageReport {
     const files: CoverageFile[] = [];
@@ -389,7 +401,7 @@ export class CoverageAnalyzerService {
     // Process individual file coverage
     if (coverageData.files) {
       for (const [filePath, fileData] of Object.entries(coverageData.files)) {
-        const file = this.processCoverageFile(filePath, fileData as any);
+        const file = this.processCoverageFile(filePath, fileData);
         files.push(file);
       }
     }
@@ -415,7 +427,7 @@ export class CoverageAnalyzerService {
     };
   }
 
-  private processCoverageFile(filePath: string, fileData: any): CoverageFile {
+  private processCoverageFile(filePath: string, fileData: RawCoverageFile): CoverageFile {
     return {
       path: filePath,
       lines: {

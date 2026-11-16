@@ -15,6 +15,9 @@ import { FeatureManagementService } from '../services/feature-management.service
 import { StorageService } from '../services/storage.service.js';
 import { TDDStage } from '../types/storage.js';
 
+/** v1 工具入参：MCP 客户端传来的未校验 JSON 对象（v2 走注册表 zod 校验） */
+type ToolArgs = Record<string, unknown>;
+
 // Tool definitions
 const TOOLS: Tool[] = [
   {
@@ -500,36 +503,36 @@ export const toolsHandler = {
     try {
       switch (name) {
         case 'generate_test_cases':
-          return await handleGenerateTestCases(args);
+          return await handleGenerateTestCases(args ?? {});
         case 'implement_from_tests':
-          return await handleImplementFromTests(args);
+          return await handleImplementFromTests(args ?? {});
         case 'run_tests':
-          return await handleRunTests(args);
+          return await handleRunTests(args ?? {});
         case 'analyze_coverage':
-          return await handleAnalyzeCoverage(args);
+          return await handleAnalyzeCoverage(args ?? {});
         case 'refactor_code':
-          return await handleRefactorCode(args);
+          return await handleRefactorCode(args ?? {});
         case 'validate_tdd_cycle':
-          return await handleValidateTDDCycle(args);
+          return await handleValidateTDDCycle(args ?? {});
         // 新增的功能特性管理工具
         case 'createFeature':
-          return await handleCreateFeature(args);
+          return await handleCreateFeature(args ?? {});
         case 'updateFeatureStatus':
-          return await handleUpdateFeatureStatus(args);
+          return await handleUpdateFeatureStatus(args ?? {});
         case 'linkFeatureFiles':
-          return await handleLinkFeatureFiles(args);
+          return await handleLinkFeatureFiles(args ?? {});
         case 'findSimilarFeatures':
-          return await handleFindSimilarFeatures(args);
+          return await handleFindSimilarFeatures(args ?? {});
         case 'createTDDSession':
-          return await handleCreateTDDSession(args);
+          return await handleCreateTDDSession(args ?? {});
         case 'updateTDDStage':
-          return await handleUpdateTDDStage(args);
+          return await handleUpdateTDDStage(args ?? {});
         case 'registerTestMethod':
-          return await handleRegisterTestMethod(args);
+          return await handleRegisterTestMethod(args ?? {});
         case 'updateTestExecutionResult':
-          return await handleUpdateTestExecutionResult(args);
+          return await handleUpdateTestExecutionResult(args ?? {});
         case 'updateTestMethodStatus':
-          return await handleUpdateTestMethodStatus(args);
+          return await handleUpdateTestMethodStatus(args ?? {});
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -548,7 +551,8 @@ export const toolsHandler = {
 };
 
 // Individual tool handlers
-async function handleGenerateTestCases(args: any): Promise<CallToolResult> {
+async function handleGenerateTestCases(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof testGenerator.generateTests>[0];
   const result = await testGenerator.generateTests({
     requirements: args.requirements,
     language: args.language,
@@ -567,7 +571,8 @@ async function handleGenerateTestCases(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleImplementFromTests(args: any): Promise<CallToolResult> {
+async function handleImplementFromTests(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof codeGenerator.generateImplementation>[0];
   const result = await codeGenerator.generateImplementation({
     testCode: args.testCode,
     language: args.language,
@@ -585,7 +590,8 @@ async function handleImplementFromTests(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleRunTests(args: any): Promise<CallToolResult> {
+async function handleRunTests(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof testRunner.runTests>[0];
   const result = await testRunner.runTests({
     projectPath: args.projectPath,
     testFiles: args.testFiles,
@@ -603,7 +609,8 @@ async function handleRunTests(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleAnalyzeCoverage(args: any): Promise<CallToolResult> {
+async function handleAnalyzeCoverage(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof coverageAnalyzer.analyzeCoverage>[0];
   const result = await coverageAnalyzer.analyzeCoverage({
     projectPath: args.projectPath,
     testCommand: args.testCommand,
@@ -621,7 +628,8 @@ async function handleAnalyzeCoverage(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleRefactorCode(args: any): Promise<CallToolResult> {
+async function handleRefactorCode(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof refactoring.refactorCode>[0];
   const result = await refactoring.refactorCode({
     sourceCode: args.sourceCode,
     refactorType: args.refactorType,
@@ -639,7 +647,8 @@ async function handleRefactorCode(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleValidateTDDCycle(args: any): Promise<CallToolResult> {
+async function handleValidateTDDCycle(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof tddCycleValidator.validateCycle>[0];
   const result = await tddCycleValidator.validateCycle({
     projectPath: args.projectPath,
     gitHistory: args.gitHistory,
@@ -657,7 +666,8 @@ async function handleValidateTDDCycle(args: any): Promise<CallToolResult> {
 }
 
 // 新增的功能特性管理工具处理函数
-async function handleCreateFeature(args: any): Promise<CallToolResult> {
+async function handleCreateFeature(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof featureManagementService.createFeature>[0];
   const result = await featureManagementService.createFeature({
     name: args.name,
     description: args.description,
@@ -679,7 +689,8 @@ async function handleCreateFeature(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleUpdateFeatureStatus(args: any): Promise<CallToolResult> {
+async function handleUpdateFeatureStatus(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof featureManagementService.updateFeatureStatus>[0];
   const result = await featureManagementService.updateFeatureStatus({
     featureId: args.featureId,
     status: args.status,
@@ -697,7 +708,8 @@ async function handleUpdateFeatureStatus(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleLinkFeatureFiles(args: any): Promise<CallToolResult> {
+async function handleLinkFeatureFiles(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as Parameters<typeof featureManagementService.linkFeatureFiles>[0];
   const result = await featureManagementService.linkFeatureFiles({
     featureId: args.featureId,
     filePaths: args.filePaths,
@@ -714,7 +726,8 @@ async function handleLinkFeatureFiles(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleFindSimilarFeatures(args: any): Promise<CallToolResult> {
+async function handleFindSimilarFeatures(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as { projectId?: string; query: string; maxResults?: number; minSimilarity?: number };
   const projectId = args.projectId || featureManagementService.getCurrentProject();
   if (!projectId) {
     throw new Error('Project ID is required. Please provide projectId or set current project.');
@@ -737,7 +750,8 @@ async function handleFindSimilarFeatures(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleCreateTDDSession(args: any): Promise<CallToolResult> {
+async function handleCreateTDDSession(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as { projectId?: string; featureId: string; developer: string; initialNotes?: string };
   const sessionId = `session-${Date.now()}`;
   const projectId = args.projectId || featureManagementService.getCurrentProject() || 'default-project';
   
@@ -765,7 +779,8 @@ async function handleCreateTDDSession(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleUpdateTDDStage(args: any): Promise<CallToolResult> {
+async function handleUpdateTDDStage(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as { sessionId: string; stage: TDDStage };
   const session = await storageService.loadTDDSession(args.sessionId);
   if (!session) {
     throw new Error(`TDD session not found: ${args.sessionId}`);
@@ -789,7 +804,8 @@ async function handleUpdateTDDStage(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleRegisterTestMethod(args: any): Promise<CallToolResult> {
+async function handleRegisterTestMethod(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as { projectId?: string; featureId: string; name: string; filePath: string; framework: string; testType?: string };
   const methodId = `test-${Date.now()}`;
   const projectId = args.projectId || featureManagementService.getCurrentProject() || 'default-project';
   
@@ -802,7 +818,7 @@ async function handleRegisterTestMethod(args: any): Promise<CallToolResult> {
     status: 'pending' as const,
     framework: args.framework,
     createdAt: new Date(),
-    testType: args.testType,
+    testType: args.testType as 'unit' | 'integration' | 'e2e' | 'performance' | undefined,
   };
 
   await storageService.registerTestMethod(testMethod);
@@ -817,7 +833,8 @@ async function handleRegisterTestMethod(args: any): Promise<CallToolResult> {
   };
 }
 
-async function handleUpdateTestExecutionResult(args: any): Promise<CallToolResult> {
+async function handleUpdateTestExecutionResult(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as { methodId: string; result: Parameters<typeof storageService.updateTestExecutionResult>[1] };
   const success = await storageService.updateTestExecutionResult(args.methodId, args.result);
   if (!success) {
     throw new Error(`Failed to update test execution result: ${args.methodId}`);
@@ -836,7 +853,8 @@ async function handleUpdateTestExecutionResult(args: any): Promise<CallToolResul
   };
 }
 
-async function handleUpdateTestMethodStatus(args: any): Promise<CallToolResult> {
+async function handleUpdateTestMethodStatus(rawArgs: ToolArgs): Promise<CallToolResult> {
+  const args = rawArgs as unknown as { methodId: string; status: string };
   const success = await storageService.updateTestMethodStatus(args.methodId, args.status);
   if (!success) {
     throw new Error(`Failed to update test method status: ${args.methodId}`);

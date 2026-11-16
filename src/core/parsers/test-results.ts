@@ -9,6 +9,43 @@
  */
 import { TestResults, TestSuiteResult, TestResult } from '../../types/tdd.js';
 
+// ---------- JSON 输入形状（解析边界：unknown 入参 + 单点形状断言） ----------
+
+interface CoverageMapJson { [file: string]: { s?: { [id: string]: number } } }
+interface JestJson {
+  testResults?: {
+    name?: string; startTime: number; endTime: number;
+    assertionResults?: {
+      title?: string; fullName?: string; status: string;
+      duration?: number; failureMessages?: string[];
+    }[];
+  }[];
+  coverageMap?: CoverageMapJson;
+}
+interface MochaSuiteJson {
+  title: string; duration?: number;
+  tests?: { title: string; state: string; duration?: number; err?: { message?: string } }[];
+  suites?: MochaSuiteJson[];
+}
+interface MochaJson { suites?: MochaSuiteJson[]; stats?: { duration?: number } }
+interface PytestJson {
+  tests?: {
+    nodeid?: string; name?: string; outcome: string;
+    call?: { duration?: number; longrepr?: string };
+  }[];
+}
+interface VitestJson {
+  numTotalTests?: number; numPassedTests?: number; numFailedTests?: number;
+  numPendingTests?: number; numTodoTests?: number;
+  testResults?: {
+    name?: string; duration?: number;
+    assertionResults?: {
+      title?: string; fullName?: string; status: string;
+      duration?: number; failureMessages?: string[];
+    }[];
+  }[];
+}
+
 // ---------- 状态映射 ----------
 
 export function mapJestStatus(status: string): 'passed' | 'failed' | 'skipped' | 'pending' {
@@ -41,7 +78,7 @@ export function mapPytestStatus(outcome: string): 'passed' | 'failed' | 'skipped
 
 // ---------- 覆盖率汇总 ----------
 
-export function calculateCoverageFromMap(coverageMap: any): number {
+export function calculateCoverageFromMap(coverageMap: CoverageMapJson): number {
   if (!coverageMap || typeof coverageMap !== 'object') {
     return 0;
   }
@@ -49,8 +86,7 @@ export function calculateCoverageFromMap(coverageMap: any): number {
   let totalStatements = 0;
   let coveredStatements = 0;
 
-  for (const fileCoverage of Object.values(coverageMap)) {
-    const coverage = fileCoverage as any;
+  for (const coverage of Object.values(coverageMap)) {
     if (coverage.s) {
       const statements = Object.values(coverage.s) as number[];
       totalStatements += statements.length;
@@ -63,7 +99,8 @@ export function calculateCoverageFromMap(coverageMap: any): number {
 
 // ---------- jest ----------
 
-export function parseJestResults(data: any): TestResults {
+export function parseJestResults(data: unknown): TestResults {
+  const json = data as JestJson;
   const suites: TestSuiteResult[] = [];
   let totalTests = 0;
   let totalPassed = 0;
@@ -71,12 +108,12 @@ export function parseJestResults(data: any): TestResults {
   let totalSkipped = 0;
   let totalDuration = 0;
 
-  for (const testResult of data.testResults || []) {
+  for (const testResult of json.testResults || []) {
     const tests: TestResult[] = [];
 
     for (const assertionResult of testResult.assertionResults || []) {
       tests.push({
-        name: assertionResult.title || assertionResult.fullName,
+        name: assertionResult.title || assertionResult.fullName || 'unknown',
         status: mapJestStatus(assertionResult.status),
         duration: assertionResult.duration || 0,
         error: assertionResult.failureMessages?.join('\n'),
@@ -112,7 +149,7 @@ export function parseJestResults(data: any): TestResults {
       failed: totalFailed,
       skipped: totalSkipped,
       duration: totalDuration,
-      coverage: data.coverageMap ? calculateCoverageFromMap(data.coverageMap) : undefined,
+      coverage: json.coverageMap ? calculateCoverageFromMap(json.coverageMap) : undefined,
     },
     timestamp: new Date(),
   };
@@ -120,14 +157,15 @@ export function parseJestResults(data: any): TestResults {
 
 // ---------- mocha ----------
 
-export function parseMochaResults(data: any): TestResults {
+export function parseMochaResults(data: unknown): TestResults {
+  const json = data as MochaJson;
   const suites: TestSuiteResult[] = [];
   let totalTests = 0;
   let totalPassed = 0;
   let totalFailed = 0;
   let totalSkipped = 0;
 
-  const processSuite = (suite: any): TestSuiteResult => {
+  const processSuite = (suite: MochaSuiteJson): TestSuiteResult => {
     const tests: TestResult[] = [];
 
     for (const test of suite.tests || []) {
@@ -157,7 +195,7 @@ export function parseMochaResults(data: any): TestResults {
     };
   };
 
-  for (const suite of data.suites || []) {
+  for (const suite of json.suites || []) {
     const suiteResult = processSuite(suite);
     suites.push(suiteResult);
     totalTests += suiteResult.summary.total;
@@ -174,7 +212,7 @@ export function parseMochaResults(data: any): TestResults {
       passed: totalPassed,
       failed: totalFailed,
       skipped: totalSkipped,
-      duration: data.stats?.duration || 0,
+      duration: json.stats?.duration || 0,
     },
     timestamp: new Date(),
   };
@@ -182,11 +220,12 @@ export function parseMochaResults(data: any): TestResults {
 
 // ---------- pytest ----------
 
-export function parsePytestResults(data: any): TestResults {
+export function parsePytestResults(data: unknown): TestResults {
+  const json = data as PytestJson;
   const suites: TestSuiteResult[] = [];
   const testsByFile = new Map<string, TestResult[]>();
 
-  for (const test of data.tests || []) {
+  for (const test of json.tests || []) {
     const fileName = test.nodeid?.split('::')[0] || 'unknown';
 
     if (!testsByFile.has(fileName)) {
@@ -194,7 +233,7 @@ export function parsePytestResults(data: any): TestResults {
     }
 
     testsByFile.get(fileName)!.push({
-      name: test.nodeid?.split('::').pop() || test.name,
+      name: test.nodeid?.split('::').pop() || test.name || 'unknown',
       status: mapPytestStatus(test.outcome),
       duration: test.call?.duration || 0,
       error: test.call?.longrepr,
@@ -256,11 +295,12 @@ export function mapVitestStatus(status: string): 'passed' | 'failed' | 'skipped'
   }
 }
 
-export function parseVitestResults(data: any): TestResults {
+export function parseVitestResults(data: unknown): TestResults {
+  const json = data as VitestJson;
   const suites: TestSuiteResult[] = [];
   let totalDuration = 0;
 
-  for (const testResult of data.testResults || []) {
+  for (const testResult of json.testResults || []) {
     const tests: TestResult[] = [];
 
     for (const assertionResult of testResult.assertionResults || []) {
@@ -309,11 +349,10 @@ export function parseVitestResults(data: any): TestResults {
     suites,
     overall: {
       // 顶层 num* 为 vitest 官方计数，优先采信；缺失时按 suite 汇总兜底
-      total: typeof data.numTotalTests === 'number' ? data.numTotalTests : suiteTotals.total,
-      passed: typeof data.numPassedTests === 'number' ? data.numPassedTests : suiteTotals.passed,
-      failed: typeof data.numFailedTests === 'number' ? data.numFailedTests : suiteTotals.failed,
-      skipped: (typeof data.numPendingTests === 'number' ? data.numPendingTests : 0)
-        + (typeof data.numTodoTests === 'number' ? data.numTodoTests : 0),
+      total: json.numTotalTests ?? suiteTotals.total,
+      passed: json.numPassedTests ?? suiteTotals.passed,
+      failed: json.numFailedTests ?? suiteTotals.failed,
+      skipped: (json.numPendingTests ?? 0) + (json.numTodoTests ?? 0),
       duration: totalDuration,
     },
     timestamp: new Date(),
