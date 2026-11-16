@@ -13,7 +13,6 @@ import {
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { toolsHandler } from './handlers/tools.js';
-import { resourcesHandler } from './handlers/resources.js';
 import { promptsHandler } from './handlers/prompts.js';
 import { I18nService } from './i18n.js';
 // V3：组合根装配（server.ts 只做启动与协议绑定）
@@ -37,7 +36,7 @@ const defaultLocale = (process.env.DEFAULT_LOCALE as 'zh' | 'en') || 'zh'; // �
 i18nService.setLocale(defaultLocale);
 
 // V3：由组合根构建对象图，server 只绑定协议
-const { newToolsHandler } = createAppContainer();
+const { newToolsHandler, resourcesHandler } = createAppContainer();
 
 // Create server instance
 const server = new Server(SERVER_INFO, {

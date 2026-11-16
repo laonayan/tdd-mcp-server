@@ -18,18 +18,21 @@ import { StorageService } from './services/storage.service.js';
 import { InMemoryStorage } from './adapters/in-memory-storage.js';
 import { GuardedCommandExecutor } from './adapters/guarded-command-executor.js';
 import { createDefaultHandlerDeps } from './default-deps.js';
+import { createResourcesHandler } from './handlers/resources.js';
 import type { CommandExecutor, StorageRepository } from './core/ports.js';
 
 export interface AppContainer {
   i18nService: I18nService;
   newToolsHandler: NewToolsHandler;
+  resourcesHandler: ReturnType<typeof createResourcesHandler>;
 }
 
 /** 默认对象图：真实适配器（JSONL 存储 + 受守卫执行网关） */
 export function createAppContainer(): AppContainer {
   const i18nService = I18nService.getInstance();
-  const newToolsHandler = new NewToolsHandler(i18nService, createDefaultHandlerDeps());
-  return { i18nService, newToolsHandler };
+  const deps = createDefaultHandlerDeps();
+  const newToolsHandler = new NewToolsHandler(i18nService, deps);
+  return { i18nService, newToolsHandler, resourcesHandler: createResourcesHandler(deps.storageService) };
 }
 
 /** 测试对象图：内存仓储（零磁盘 IO），其余依赖可覆写 */
@@ -55,5 +58,5 @@ export function createTestContainer(
     featureManagementService: new FeatureManagementService(storage as StorageService),
   });
 
-  return { i18nService, newToolsHandler };
+  return { i18nService, newToolsHandler, resourcesHandler: createResourcesHandler(storage) };
 }

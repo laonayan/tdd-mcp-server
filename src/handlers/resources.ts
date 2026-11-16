@@ -9,6 +9,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { glob } from 'glob';
+import type { StorageRepository } from '../core/ports.js';
+import { listStateResources, readStateResource } from './session-resources.js';
+import { StorageService } from '../services/storage.service.js';
 
 // ESM-compatible __dirname (package "type": "module")
 const __filename = fileURLToPath(import.meta.url);
@@ -23,100 +26,122 @@ const RESOURCE_TYPES = {
   BEST_PRACTICES: 'tdd://best-practices',
 } as const;
 
-export const resourcesHandler = {
-  async listResources(_request: ListResourcesRequest): Promise<ListResourcesResult> {
-    try {
-      const resources: Resource[] = [];
-      const projectPath = process.env.PROJECT_PATH || process.cwd();
-
-      // Add test files
-      const testFiles = await findTestFiles(projectPath);
-      for (const testFile of testFiles) {
-        resources.push({
-          uri: `${RESOURCE_TYPES.TEST_FILES}/${path.relative(projectPath, testFile)}`,
-          name: `Test: ${path.basename(testFile)}`,
-          description: 'Test file containing unit/integration tests',
-          mimeType: getMimeTypeForFile(testFile),
-        });
-      }
-
-      // Add implementation files
-      const implFiles = await findImplementationFiles(projectPath);
-      for (const implFile of implFiles) {
-        resources.push({
-          uri: `${RESOURCE_TYPES.IMPLEMENTATION_FILES}/${path.relative(projectPath, implFile)}`,
-          name: `Implementation: ${path.basename(implFile)}`,
-          description: 'Implementation file containing production code',
-          mimeType: getMimeTypeForFile(implFile),
-        });
-      }
-
-      // Add test reports (if they exist)
-      const testReports = await findTestReports(projectPath);
-      for (const report of testReports) {
-        resources.push({
-          uri: `${RESOURCE_TYPES.TEST_REPORTS}/${path.basename(report)}`,
-          name: `Test Report: ${path.basename(report)}`,
-          description: 'Test execution results and metrics',
-          mimeType: 'application/json',
-        });
-      }
-
-      // Add coverage reports (if they exist)
-      const coverageReports = await findCoverageReports(projectPath);
-      for (const report of coverageReports) {
-        resources.push({
-          uri: `${RESOURCE_TYPES.COVERAGE_REPORTS}/${path.basename(report)}`,
-          name: `Coverage Report: ${path.basename(report)}`,
-          description: 'Code coverage analysis results',
-          mimeType: 'application/json',
-        });
-      }
-
-      // Add best practices documents
-      const bestPracticesPath = path.join(__dirname, '../../best-practices');
+/**
+ * 资源 handler 工厂：注入存储仓储后，除项目文件资源外
+ * 还暴露服务器状态资源（会话/feature/跟踪）。
+ */
+export function createResourcesHandler(storage: StorageRepository) {
+  return {
+    async listResources(_request: ListResourcesRequest): Promise<ListResourcesResult> {
       try {
-        const practiceFiles = await fs.readdir(bestPracticesPath);
-        for (const file of practiceFiles.filter(f => f.endsWith('.md'))) {
+        const resources: Resource[] = [];
+        const projectPath = process.env.PROJECT_PATH || process.cwd();
+
+        // Add test files
+        const testFiles = await findTestFiles(projectPath);
+        for (const testFile of testFiles) {
           resources.push({
-            uri: `${RESOURCE_TYPES.BEST_PRACTICES}/${file}`,
-            name: `Best Practice: ${file.replace('.md', '').replace(/-/g, ' ')}`,
-            description: 'TDD best practices and guidelines',
-            mimeType: 'text/markdown',
+            uri: `${RESOURCE_TYPES.TEST_FILES}/${path.relative(projectPath, testFile)}`,
+            name: `Test: ${path.basename(testFile)}`,
+            description: 'Test file containing unit/integration tests',
+            mimeType: getMimeTypeForFile(testFile),
           });
         }
-      } catch {
+
+        // Add implementation files
+        const implFiles = await findImplementationFiles(projectPath);
+        for (const implFile of implFiles) {
+          resources.push({
+            uri: `${RESOURCE_TYPES.IMPLEMENTATION_FILES}/${path.relative(projectPath, implFile)}`,
+            name: `Implementation: ${path.basename(implFile)}`,
+            description: 'Implementation file containing production code',
+            mimeType: getMimeTypeForFile(implFile),
+          });
+        }
+
+        // Add test reports (if they exist)
+        const testReports = await findTestReports(projectPath);
+        for (const report of testReports) {
+          resources.push({
+            uri: `${RESOURCE_TYPES.TEST_REPORTS}/${path.basename(report)}`,
+            name: `Test Report: ${path.basename(report)}`,
+            description: 'Test execution results and metrics',
+            mimeType: 'application/json',
+          });
+        }
+
+        // Add coverage reports (if they exist)
+        const coverageReports = await findCoverageReports(projectPath);
+        for (const report of coverageReports) {
+          resources.push({
+            uri: `${RESOURCE_TYPES.COVERAGE_REPORTS}/${path.basename(report)}`,
+            name: `Coverage Report: ${path.basename(report)}`,
+            description: 'Code coverage analysis results',
+            mimeType: 'application/json',
+          });
+        }
+
+        // Add best practices documents
+        const bestPracticesPath = path.join(__dirname, '../../best-practices');
+        try {
+          const practiceFiles = await fs.readdir(bestPracticesPath);
+          for (const file of practiceFiles.filter(f => f.endsWith('.md'))) {
+            resources.push({
+              uri: `${RESOURCE_TYPES.BEST_PRACTICES}/${file}`,
+              name: `Best Practice: ${file.replace('.md', '').replace(/-/g, ' ')}`,
+              description: 'TDD best practices and guidelines',
+              mimeType: 'text/markdown',
+            });
+          }
+        } catch {
         // Best practices directory doesn't exist or is inaccessible
+        }
+
+        // 服务器状态资源（真实存储驱动；失败不阻塞文件资源列表）
+        try {
+          resources.push(...await listStateResources(storage));
+        } catch {
+        // 状态存储不可达时如实省略，不伪造条目
+        }
+
+        return { resources };
+      } catch (error) {
+        throw new Error(`Failed to list resources: ${error instanceof Error ? error.message : String(error)}`);
       }
+    },
 
-      return { resources };
-    } catch (error) {
-      throw new Error(`Failed to list resources: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  },
+    async readResource(request: ReadResourceRequest): Promise<ReadResourceResult> {
+      const { uri } = request.params;
 
-  async readResource(request: ReadResourceRequest): Promise<ReadResourceResult> {
-    const { uri } = request.params;
+      try {
+      // 状态资源家族优先；null 表示非状态 URI，走原有文件资源分支
+        const stateResult = await readStateResource(storage, uri);
+        if (stateResult) {
+          return stateResult;
+        }
 
-    try {
-      if (uri.startsWith(RESOURCE_TYPES.TEST_FILES)) {
-        return await readTestFile(uri);
-      } else if (uri.startsWith(RESOURCE_TYPES.IMPLEMENTATION_FILES)) {
-        return await readImplementationFile(uri);
-      } else if (uri.startsWith(RESOURCE_TYPES.TEST_REPORTS)) {
-        return await readTestReport(uri);
-      } else if (uri.startsWith(RESOURCE_TYPES.COVERAGE_REPORTS)) {
-        return await readCoverageReport(uri);
-      } else if (uri.startsWith(RESOURCE_TYPES.BEST_PRACTICES)) {
-        return await readBestPractice(uri);
-      } else {
-        throw new Error(`Unknown resource URI: ${uri}`);
+        if (uri.startsWith(RESOURCE_TYPES.TEST_FILES)) {
+          return await readTestFile(uri);
+        } else if (uri.startsWith(RESOURCE_TYPES.IMPLEMENTATION_FILES)) {
+          return await readImplementationFile(uri);
+        } else if (uri.startsWith(RESOURCE_TYPES.TEST_REPORTS)) {
+          return await readTestReport(uri);
+        } else if (uri.startsWith(RESOURCE_TYPES.COVERAGE_REPORTS)) {
+          return await readCoverageReport(uri);
+        } else if (uri.startsWith(RESOURCE_TYPES.BEST_PRACTICES)) {
+          return await readBestPractice(uri);
+        } else {
+          throw new Error(`Unknown resource URI: ${uri}`);
+        }
+      } catch (error) {
+        throw new Error(`Failed to read resource ${uri}: ${error instanceof Error ? error.message : String(error)}`);
       }
-    } catch (error) {
-      throw new Error(`Failed to read resource ${uri}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  },
-};
+    },
+  };
+}
+
+/** 默认实例（真实 JSONL 存储）；server.ts 组合根装配时用 createResourcesHandler */
+export const resourcesHandler = createResourcesHandler(new StorageService());
 
 // Helper functions
 async function findTestFiles(projectPath: string): Promise<string[]> {
